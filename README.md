@@ -22,7 +22,7 @@ cmake -S . -B build-msys2 -G "MinGW Makefiles" `
 cmake --build build-msys2 -j 1
 .\build-msys2\quarto.exe
 ```
-
+Execute \build-msys2\quarto.exe e divirta-se
 Se o MSYS2 foi instalado fora de `C:\msys64`, ajuste esse caminho nos comandos. A pasta `build-msys2` é nova para não reutilizar a configuração de um compilador antigo. O CMake copia `assets/quadro.jpg` para a pasta do executável.
 
 ## Comandos
