@@ -1,4 +1,7 @@
 /build/
 /build-vs/
+/build-mingw/
+/build-short/
+/build-traducao/
 /.cmake/
 /quarto.exe

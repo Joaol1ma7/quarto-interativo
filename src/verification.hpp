@@ -2,8 +2,8 @@
 #include "behavior.hpp"
 
 struct VerificationFrame {
-    Scene scene;
-    Vec3 camera, target;
-    std::string file;
+    Scene cena;
+    Vec3 camera, alvo;
+    std::string arquivo;
 };
 std::vector<VerificationFrame> makeVerificationFrames();

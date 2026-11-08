@@ -19,12 +19,12 @@ inline Vec3 normalized(Vec3 v) {
 }
 
 struct Mat4 {
-    std::array<float, 16> values{}; // OpenGL usa ordem por colunas.
+    std::array<float, 16> valores{}; // OpenGL usa ordem por colunas.
 };
 
 inline Mat4 identity() {
     Mat4 m;
-    m.values[0] = m.values[5] = m.values[10] = m.values[15] = 1;
+    m.valores[0] = m.valores[5] = m.valores[10] = m.valores[15] = 1;
     return m;
 }
 inline Mat4 operator*(const Mat4& a, const Mat4& b) {
@@ -32,69 +32,69 @@ inline Mat4 operator*(const Mat4& a, const Mat4& b) {
     for (int c = 0; c < 4; ++c)
         for (int r = 0; r < 4; ++r)
             for (int k = 0; k < 4; ++k)
-                m.values[c*4+r] += a.values[k*4+r] * b.values[c*4+k];
+                m.valores[c*4+r] += a.valores[k*4+r] * b.valores[c*4+k];
     return m;
 }
 inline Mat4 translate(Vec3 p) {
     Mat4 m = identity();
-    m.values[12] = p.x; m.values[13] = p.y; m.values[14] = p.z;
+    m.valores[12] = p.x; m.valores[13] = p.y; m.valores[14] = p.z;
     return m;
 }
 inline Mat4 scale(Vec3 s) {
     Mat4 m = identity();
-    m.values[0] = s.x; m.values[5] = s.y; m.values[10] = s.z;
+    m.valores[0] = s.x; m.valores[5] = s.y; m.valores[10] = s.z;
     return m;
 }
-inline Mat4 rotateY(float angle) {
+inline Mat4 rotateY(float angulo) {
     Mat4 m = identity();
-    m.values[0] = m.values[10] = std::cos(angle);
-    m.values[8] = std::sin(angle); m.values[2] = -std::sin(angle);
+    m.valores[0] = m.valores[10] = std::cos(angulo);
+    m.valores[8] = std::sin(angulo); m.valores[2] = -std::sin(angulo);
     return m;
 }
-inline Mat4 rotateX(float angle) {
+inline Mat4 rotateX(float angulo) {
     Mat4 m = identity();
-    m.values[5] = m.values[10] = std::cos(angle);
-    m.values[6] = std::sin(angle); m.values[9] = -std::sin(angle);
+    m.valores[5] = m.valores[10] = std::cos(angulo);
+    m.valores[6] = std::sin(angulo); m.valores[9] = -std::sin(angulo);
     return m;
 }
-inline Mat4 rotateZ(float angle) {
+inline Mat4 rotateZ(float angulo) {
     Mat4 m = identity();
-    m.values[0] = m.values[5] = std::cos(angle);
-    m.values[1] = std::sin(angle); m.values[4] = -std::sin(angle);
+    m.valores[0] = m.valores[5] = std::cos(angulo);
+    m.valores[1] = std::sin(angulo); m.valores[4] = -std::sin(angulo);
     return m;
 }
-inline Mat4 model(Vec3 position, Vec3 size, float yaw = 0) {
-    return translate(position) * rotateY(yaw) * scale(size);
+inline Mat4 model(Vec3 posicao, Vec3 size, float guinada = 0) {
+    return translate(posicao) * rotateY(guinada) * scale(size);
 }
 inline Vec3 transformPoint(const Mat4& m, Vec3 p) {
-    const auto& a = m.values;
+    const auto& a = m.valores;
     return {a[0]*p.x+a[4]*p.y+a[8]*p.z+a[12],
             a[1]*p.x+a[5]*p.y+a[9]*p.z+a[13],
             a[2]*p.x+a[6]*p.y+a[10]*p.z+a[14]};
 }
 
-inline Mat4 perspective(float fovRadians, float aspect, float nearPlane, float farPlane) {
-    const float f = 1.0f / std::tan(fovRadians * 0.5f);
+inline Mat4 perspective(float campoVisaoRadianos, float proporcao, float planoProximo, float planoDistante) {
+    const float f = 1.0f / std::tan(campoVisaoRadianos * 0.5f);
     Mat4 m;
-    m.values[0] = f / aspect;
-    m.values[5] = f;
-    m.values[10] = (farPlane + nearPlane) / (nearPlane - farPlane);
-    m.values[11] = -1.0f;
-    m.values[14] = 2.0f * farPlane * nearPlane / (nearPlane - farPlane);
+    m.valores[0] = f / proporcao;
+    m.valores[5] = f;
+    m.valores[10] = (planoDistante + planoProximo) / (planoProximo - planoDistante);
+    m.valores[11] = -1.0f;
+    m.valores[14] = 2.0f * planoDistante * planoProximo / (planoProximo - planoDistante);
     return m;
 }
 
-inline Mat4 lookAt(Vec3 eye, Vec3 target) {
-    const Vec3 forward = normalized(target - eye);
+inline Mat4 lookAt(Vec3 olho, Vec3 alvo) {
+    const Vec3 frente = normalized(alvo - olho);
     // Uma fonte vertical (a luminaria) precisa de um eixo auxiliar diferente.
-    const Vec3 reference = std::abs(forward.y) > .99f ? Vec3{0,0,-1} : Vec3{0,1,0};
-    const Vec3 right = normalized(cross(forward, reference));
-    const Vec3 up = cross(right, forward);
+    const Vec3 referencia = std::abs(frente.y) > .99f ? Vec3{0,0,-1} : Vec3{0,1,0};
+    const Vec3 direita = normalized(cross(frente, referencia));
+    const Vec3 cima = cross(direita, frente);
     Mat4 m;
-    m.values = {right.x, up.x, -forward.x, 0.0f,
-                right.y, up.y, -forward.y, 0.0f,
-                right.z, up.z, -forward.z, 0.0f,
-                -dot(right, eye), -dot(up, eye), dot(forward, eye), 1.0f};
+    m.valores = {direita.x, cima.x, -frente.x, 0.0f,
+                direita.y, cima.y, -frente.y, 0.0f,
+                direita.z, cima.z, -frente.z, 0.0f,
+                -dot(direita, olho), -dot(cima, olho), dot(frente, olho), 1.0f};
     return m;
 }
 

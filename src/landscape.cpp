@@ -2,30 +2,30 @@
 #include "celestial.hpp"
 
 // Pequeno jardim de formas simples. Tudo fica fora do contorno navegavel.
-void addLandscape(Scene& scene) {
+void addLandscape(Scene& cena) {
     using M = MaterialId;
-    auto add = [&](const char* name, MeshKind mesh, M material,
-                   Vec3 position, Vec3 size, unsigned char mask=7) {
-        scene.parts.push_back({name,mesh,material,model(position,size),
+    auto add = [&](const char* nome, MeshKind malha, M material,
+                   Vec3 posicao, Vec3 size, unsigned char mask=7) {
+        cena.partes.push_back({nome,malha,material,model(posicao,size),
                                Group::Static,true,mask});
     };
-    auto box = [&](const char* name, M material, Vec3 position, Vec3 size) {
-        add(name,MeshKind::Cube,material,position,size);
+    auto box = [&](const char* nome, M material, Vec3 posicao, Vec3 size) {
+        add(nome,MeshKind::Cube,material,posicao,size);
     };
-    auto sphere = [&](const char* name, M material, Vec3 position, Vec3 size,
+    auto sphere = [&](const char* nome, M material, Vec3 posicao, Vec3 size,
                       unsigned char mask=7) {
-        add(name,MeshKind::Sphere,material,position,size,mask);
+        add(nome,MeshKind::Sphere,material,posicao,size,mask);
     };
 
     // A superficie verde passa sob o quarto; o piso interno cobre sua parte visivel.
     box("terreno",M::Grass,{4.25f,-.11f,2.4f},{60.f,.16f,40.f});
     // Dois conjuntos de colinas, um ao fundo de cada abertura.
-    for (float side : {-1.f,1.f}) {
-        const float x=side<0 ? -16.f : 25.f;
-        const float z=side<0 ? 2.5f : 4.1f;
+    for (float lado : {-1.f,1.f}) {
+        const float x=lado<0 ? -16.f : 25.f;
+        const float z=lado<0 ? 2.5f : 4.1f;
         sphere("colina",M::HillFar,{x,-.8f,z-4.f},{8.f,5.4f,10.f});
-        sphere("colina",M::HillNear,{x+side*2.f,-.9f,z+5.f},{7.f,5.f,10.f});
-        sphere("colina",M::HillFar,{x+side*6.f,-1.2f,z},{8.f,4.8f,9.f});
+        sphere("colina",M::HillNear,{x+lado*2.f,-.9f,z+5.f},{7.f,5.f,10.f});
+        sphere("colina",M::HillFar,{x+lado*6.f,-1.2f,z},{8.f,4.8f,9.f});
     }
 
     // Lajes do caminho saem do vao da porta e continuam pelo gramado.
@@ -34,12 +34,12 @@ void addLandscape(Scene& scene) {
         box("caminho",M::Path,{x,-.005f,4.07f},{.78f,.07f,1.03f});
     }
 
-    auto tree = [&](float x,float z,float height) {
-        add("arvore",MeshKind::Cylinder,M::Bark,{x,height*.30f,z},
-            {.22f,height*.60f,.22f});
-        sphere("arvore",M::Leaves,{x,height*.77f,z},{1.65f,height*.69f,1.65f});
-        sphere("arvore",M::Leaves,{x-.34f,height*.64f,z+.26f},
-               {1.18f,height*.48f,1.18f});
+    auto tree = [&](float x,float z,float altura) {
+        add("arvore",MeshKind::Cylinder,M::Bark,{x,altura*.30f,z},
+            {.22f,altura*.60f,.22f});
+        sphere("arvore",M::Leaves,{x,altura*.77f,z},{1.65f,altura*.69f,1.65f});
+        sphere("arvore",M::Leaves,{x-.34f,altura*.64f,z+.26f},
+               {1.18f,altura*.48f,1.18f});
     };
     tree(-4.0f,1.0f,2.85f);
     tree(-6.6f,4.0f,3.25f);
@@ -59,17 +59,17 @@ void addLandscape(Scene& scene) {
     cloud(22.f,3.7f,1.0f);
 
     // Um sol move-se com o horario; a lua ocupa uma unica posicao noturna.
-    scene.parts.push_back({"sol",MeshKind::Sphere,M::Sun,
+    cena.partes.push_back({"sol",MeshKind::Sphere,M::Sun,
                            scale({1.25f,1.25f,1.25f}),Group::Sun,true,3});
     sphere("lua",M::Moon,celestialVisualPosition(DayPeriod::Night),
            {.95f,.95f,.95f},4);
-    for (float side : {-1.f,1.f}) {
-        float x=side<0 ? -13.f : 20.f;
-        float baseZ=side<0 ? 2.5f : 4.05f;
+    for (float lado : {-1.f,1.f}) {
+        float x=lado<0 ? -13.f : 20.f;
+        float baseZ=lado<0 ? 2.5f : 4.05f;
         for (int i=0;i<13;++i) {
             float z=baseZ+float((i*7)%11-5)*.69f;
             float y=3.1f+float((i*5)%7)*.32f;
-            sphere("estrela",M::Star,{x+side*float(i%3)*.65f,y,z},
+            sphere("estrela",M::Star,{x+lado*float(i%3)*.65f,y,z},
                    {.13f,.13f,.13f},4);
         }
     }

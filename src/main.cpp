@@ -63,20 +63,20 @@ PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2DPtr;
 PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatusPtr;
 PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffersPtr;
 
-void* glFunction(const char* name) {
-    void* p = reinterpret_cast<void*>(wglGetProcAddress(name));
+void* glFunction(const char* nome) {
+    void* p = reinterpret_cast<void*>(wglGetProcAddress(nome));
     if (p == nullptr || p == reinterpret_cast<void*>(1) ||
         p == reinterpret_cast<void*>(2) || p == reinterpret_cast<void*>(3) ||
         p == reinterpret_cast<void*>(-1)) {
-        static HMODULE library = LoadLibraryA("opengl32.dll");
-        p = reinterpret_cast<void*>(GetProcAddress(library, name));
+        static HMODULE biblioteca = LoadLibraryA("opengl32.dll");
+        p = reinterpret_cast<void*>(GetProcAddress(biblioteca, nome));
     }
     return p;
 }
 
-#define LOAD_GL(member, name) do { \
-    member = reinterpret_cast<decltype(member)>(glFunction(name)); \
-    if (!member) throw std::runtime_error(std::string("Funcao OpenGL ausente: ") + name); \
+#define LOAD_GL(membro, nome) do { \
+    membro = reinterpret_cast<decltype(membro)>(glFunction(nome)); \
+    if (!membro) throw std::runtime_error(std::string("Funcao OpenGL ausente: ") + nome); \
 } while (false)
 
 void loadOpenGL() {
@@ -117,39 +117,39 @@ void loadOpenGL() {
     LOAD_GL(glDeleteFramebuffersPtr, "glDeleteFramebuffers");
 }
 
-GLuint compileShader(GLenum type, const char* source) {
-    const GLuint shader = glCreateShaderPtr(type);
-    glShaderSourcePtr(shader, 1, &source, nullptr);
-    glCompileShaderPtr(shader);
+GLuint compileShader(GLenum tipoGl, const char* fonte) {
+    const GLuint sombreador = glCreateShaderPtr(tipoGl);
+    glShaderSourcePtr(sombreador, 1, &fonte, nullptr);
+    glCompileShaderPtr(sombreador);
     GLint ok = GL_FALSE;
-    glGetShaderivPtr(shader, GL_COMPILE_STATUS, &ok);
+    glGetShaderivPtr(sombreador, GL_COMPILE_STATUS, &ok);
     if (!ok) {
-        std::array<char, 1024> log{};
-        glGetShaderInfoLogPtr(shader, static_cast<GLsizei>(log.size()), nullptr, log.data());
-        glDeleteShaderPtr(shader);
-        throw std::runtime_error(std::string("Erro no shader: ") + log.data());
+        std::array<char, 1024> registro{};
+        glGetShaderInfoLogPtr(sombreador, static_cast<GLsizei>(registro.size()), nullptr, registro.data());
+        glDeleteShaderPtr(sombreador);
+        throw std::runtime_error(std::string("Erro no sombreador: ") + registro.data());
     }
-    return shader;
+    return sombreador;
 }
 
-GLuint linkProgram(const char* vertexSource, const char* fragmentSource) {
-    const GLuint vs = compileShader(GL_VERTEX_SHADER, vertexSource);
-    const GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
-    const GLuint program = glCreateProgramPtr();
-    glAttachShaderPtr(program, vs);
-    glAttachShaderPtr(program, fs);
-    glLinkProgramPtr(program);
+GLuint linkProgram(const char* fonteVertice, const char* fonteFragmento) {
+    const GLuint vs = compileShader(GL_VERTEX_SHADER, fonteVertice);
+    const GLuint fs = compileShader(GL_FRAGMENT_SHADER, fonteFragmento);
+    const GLuint programa = glCreateProgramPtr();
+    glAttachShaderPtr(programa, vs);
+    glAttachShaderPtr(programa, fs);
+    glLinkProgramPtr(programa);
     glDeleteShaderPtr(vs);
     glDeleteShaderPtr(fs);
     GLint ok = GL_FALSE;
-    glGetProgramivPtr(program, GL_LINK_STATUS, &ok);
+    glGetProgramivPtr(programa, GL_LINK_STATUS, &ok);
     if (!ok) {
-        std::array<char, 1024> log{};
-        glGetProgramInfoLogPtr(program, static_cast<GLsizei>(log.size()), nullptr, log.data());
-        glDeleteProgramPtr(program);
-        throw std::runtime_error(std::string("Erro ao ligar shaders: ") + log.data());
+        std::array<char, 1024> registro{};
+        glGetProgramInfoLogPtr(programa, static_cast<GLsizei>(registro.size()), nullptr, registro.data());
+        glDeleteProgramPtr(programa);
+        throw std::runtime_error(std::string("Erro ao ligar shaders: ") + registro.data());
     }
-    return program;
+    return programa;
 }
 
 GLuint makeDepthProgram() {
@@ -164,7 +164,7 @@ void main() {}
 }
 
 GLuint makeProgram() {
-    constexpr const char* vertexSource = R"GLSL(#version 330 core
+    constexpr const char* fonteVertice = R"GLSL(#version 330 core
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec3 aColor;
@@ -181,17 +181,17 @@ out vec2 vUV;
 out vec4 vNaturalShadow;
 out vec4 vLampShadow;
 void main() {
-    vec4 world = uModel * vec4(aPosition, 1.0);
-    vPosition = world.xyz;
-    vNormal = transpose(inverse(mat3(uModel))) * aNormal;
+    vec4 mundo = uModel * vec4(aPosition, 1.0);
+    vPosition = mundo.xyz;
+    vNormal = transpose(inversa(mat3(uModel))) * aNormal;
     vColor = aColor;
     vUV = aUV;
-    vNaturalShadow = uNaturalShadowMatrix * world;
-    vLampShadow = uLampShadowMatrix * world;
-    gl_Position = uProjection * uView * world;
+    vNaturalShadow = uNaturalShadowMatrix * mundo;
+    vLampShadow = uLampShadowMatrix * mundo;
+    gl_Position = uProjection * uView * mundo;
 }
 )GLSL";
-    constexpr const char* fragmentSource = R"GLSL(#version 330 core
+    constexpr const char* fonteFragmento = R"GLSL(#version 330 core
 in vec3 vNormal;
 in vec3 vColor;
 in vec3 vPosition;
@@ -218,203 +218,203 @@ uniform int uOutdoor;
 uniform int uGlass;
 uniform vec3 uShadowActive; // natural, luminaria
 out vec4 fragColor;
-float shadowVisibility(sampler2D depthMap, vec4 lightSpace, vec3 normal,
-                       vec3 direction, float enabled) {
-    if (enabled < 0.5) return 1.0;
+float shadowVisibility(sampler2D mapaProfundidade, vec4 lightSpace, vec3 normal,
+                       vec3 direcao, float habilitada) {
+    if (habilitada < 0.5) return 1.0;
     if (lightSpace.w <= 0.0) return 0.0;
     vec3 p = lightSpace.xyz / lightSpace.w * 0.5 + 0.5;
     if (p.z <= 0.0 || p.z >= 1.0 || p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0)
         return 0.0;
-    float bias = max(0.002 * (1.0 - max(dot(normal,direction),0.0)), 0.00065);
-    vec2 texel = 1.0 / vec2(textureSize(depthMap,0));
-    float lit = 0.0;
+    float deslocamentoSombra = max(0.002 * (1.0 - max(dot(normal,direcao),0.0)), 0.00065);
+    vec2 texel = 1.0 / vec2(tamanhoTextura(mapaProfundidade,0));
+    float iluminacao = 0.0;
     for (int y=-1; y<=1; ++y)
         for (int x=-1; x<=1; ++x)
-            lit += p.z - bias <= texture(depthMap,p.xy+vec2(x,y)*texel).r ? 1.0 : 0.0;
+            iluminacao += p.z - deslocamentoSombra <= texture(mapaProfundidade,p.xy+vec2(x,y)*texel).r ? 1.0 : 0.0;
     // Um unico texel livre na borda de duas paredes nao deve virar um filete de luz.
-    return smoothstep(0.15,0.85,lit / 9.0);
+    return smoothstep(0.15,0.85,iluminacao / 9.0);
 }
-float entranceVisibility(vec3 point) {
-    float span=point.x-uNaturalPosition.x;
-    if (abs(span)<0.0001) return 0.0;
-    float t=(uSunBoundaryX-uNaturalPosition.x)/span;
+float entranceVisibility(vec3 ponto) {
+    float intervalo=ponto.x-uNaturalPosition.x;
+    if (abs(intervalo)<0.0001) return 0.0;
+    float t=(uSunBoundaryX-uNaturalPosition.x)/intervalo;
     if (t<=0.0 || t>1.001) return 0.0;
-    vec3 hit=mix(uNaturalPosition,point,t);
-    float clearance=min(min(hit.y-uSunOpening.x,uSunOpening.y-hit.y),
-                        min(hit.z-uSunOpening.z,uSunOpening.w-hit.z));
-    return smoothstep(0.0,0.02,clearance);
+    vec3 impacto=mix(uNaturalPosition,ponto,t);
+    float folga=min(min(impacto.y-uSunOpening.x,uSunOpening.y-impacto.y),
+                        min(impacto.z-uSunOpening.z,uSunOpening.w-impacto.z));
+    return smoothstep(0.0,0.02,folga);
 }
 void main() {
     vec3 normal = normalize(vNormal);
     vec3 toLight = uLampPosition - vPosition;
-    vec3 lightDir = normalize(toLight);
-    vec3 viewDir = normalize(uCamera - vPosition);
-    float attenuation = 1.0 / (1.0 + 0.035 * dot(toLight, toLight));
-    float coneCos = dot(normalize(vPosition - uLampPosition), uLampDirection);
-    float cone = smoothstep(uLampCone.x, uLampCone.y, coneCos);
+    vec3 direcaoLuz = normalize(toLight);
+    vec3 direcaoVisao = normalize(uCamera - vPosition);
+    float atenuacao = 1.0 / (1.0 + 0.035 * dot(toLight, toLight));
+    float cossenoCone = dot(normalize(vPosition - uLampPosition), uLampDirection);
+    float cone = smoothstep(uLampCone.x, uLampCone.y, cossenoCone);
     vec3 artificial = uArtificial * cone;
-    float diffuse = max(dot(normal, lightDir), 0.0);
-    float specular = diffuse > 0.0 ? pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), uMaterial.y) : 0.0;
+    float difusa = max(dot(normal, direcaoLuz), 0.0);
+    float especular = difusa > 0.0 ? pow(max(dot(normal, normalize(direcaoLuz + direcaoVisao)), 0.0), uMaterial.y) : 0.0;
     vec3 toWindow = uNaturalPosition - vPosition;
     vec3 sunDir = normalize(toWindow);
-    float sunAttenuation = 1.0 / (1.0 + 0.018 * dot(toWindow, toWindow));
-    float daylight = max(dot(normal, sunDir), 0.0);
-    float sunSpecular = daylight > 0.0 ? pow(max(dot(normal, normalize(sunDir + viewDir)), 0.0), uMaterial.y) : 0.0;
+    float atenuacaoSol = 1.0 / (1.0 + 0.018 * dot(toWindow, toWindow));
+    float luzDia = max(dot(normal, sunDir), 0.0);
+    float especularSol = luzDia > 0.0 ? pow(max(dot(normal, normalize(sunDir + direcaoVisao)), 0.0), uMaterial.y) : 0.0;
     vec3 albedo = texture(uTexture, vUV).rgb * vColor * uColor.rgb;
-    float sunShadow = shadowVisibility(uNaturalShadowMap,vNaturalShadow,normal,
+    float sombraSol = shadowVisibility(uNaturalShadowMap,vNaturalShadow,normal,
                                        sunDir,uShadowActive.x) * entranceVisibility(vPosition);
-    float lampShadow = shadowVisibility(uLampShadowMap,vLampShadow,normal,
-                                        lightDir,uShadowActive.y);
+    float sombraLuminaria = shadowVisibility(uLampShadowMap,vLampShadow,normal,
+                                        direcaoLuz,uShadowActive.y);
     // Uma base ambiente discreta deixa as faces voltadas para a luz mais claras.
-    vec3 direct = uNatural * daylight * sunAttenuation * sunShadow
-                + artificial * (0.05 + 0.95 * diffuse) * attenuation * lampShadow;
-    vec3 lit = albedo * (0.62 * uAmbient + direct);
-    vec3 highlight = uMaterial.x * (1.7 * artificial * specular * attenuation * lampShadow
-                                   + 0.65 * uNatural * sunSpecular * sunAttenuation * sunShadow);
-    lit += highlight;
-    float opacity = uColor.a;
+    vec3 direto = uNatural * luzDia * atenuacaoSol * sombraSol
+                + artificial * (0.05 + 0.95 * difusa) * atenuacao * sombraLuminaria;
+    vec3 iluminacao = albedo * (0.62 * uAmbient + direto);
+    vec3 highlight = uMaterial.x * (1.7 * artificial * especular * atenuacao * sombraLuminaria
+                                   + 0.65 * uNatural * especularSol * atenuacaoSol * sombraSol);
+    iluminacao += highlight;
+    float opacidade = uColor.a;
     if (uGlass != 0) {
         // Schlick simplificado: transparencia frontal e bordas mais refletivas.
-        float facing = abs(dot(normal, viewDir));
-        float fresnel = pow(1.0 - clamp(facing, 0.0, 1.0), 3.0);
-        float glint = length(artificial) * specular * attenuation * lampShadow
-                    + length(uNatural) * sunSpecular * sunAttenuation * sunShadow;
-        float sheen = clamp(0.12 + 0.70 * fresnel + 0.12 * glint, 0.0, 0.9);
+        float frontalidade = abs(dot(normal, direcaoVisao));
+        float fresnel = pow(1.0 - clamp(frontalidade, 0.0, 1.0), 3.0);
+        float reflexo = length(artificial) * especular * atenuacao * sombraLuminaria
+                    + length(uNatural) * especularSol * atenuacaoSol * sombraSol;
+        float lustro = clamp(0.12 + 0.70 * fresnel + 0.12 * reflexo, 0.0, 0.9);
         vec3 reflection = vec3(0.78, 0.89, 1.0)
-                        * clamp(length(uAmbient + uNatural * sunShadow
-                                       + artificial * lampShadow), 0.15, 1.0);
-        lit = mix(0.42 * albedo * (uAmbient + direct), reflection, sheen);
-        opacity = clamp(uColor.a + 0.43 * fresnel + 0.12 * glint,
+                        * clamp(length(uAmbient + uNatural * sombraSol
+                                       + artificial * sombraLuminaria), 0.15, 1.0);
+        iluminacao = mix(0.42 * albedo * (uAmbient + direto), reflection, lustro);
+        opacidade = clamp(uColor.a + 0.43 * fresnel + 0.12 * reflexo,
                         uColor.a, 0.68);
     }
     if (uOutdoor != 0) {
-        float skyFacing = max(dot(normal, normalize(vec3(0.35, 0.85, 0.4))), 0.0);
-        lit = albedo * uOutdoorLight * (0.72 + 0.28 * skyFacing);
+        float orientacaoCeu = max(dot(normal, normalize(vec3(0.35, 0.85, 0.4))), 0.0);
+        iluminacao = albedo * uOutdoorLight * (0.72 + 0.28 * orientacaoCeu);
     }
-    lit = mix(lit, albedo, uMaterial.z);
-    fragColor = vec4(lit, opacity);
+    iluminacao = mix(iluminacao, albedo, uMaterial.z);
+    fragColor = vec4(iluminacao, opacidade);
 }
 )GLSL";
-    return linkProgram(vertexSource,fragmentSource);
+    return linkProgram(fonteVertice,fonteFragmento);
 }
 
 struct GpuMesh { GLuint vao=0, vbo=0; GLsizei count=0; };
-struct ShadowMap { GLuint texture=0, framebuffer=0; };
-constexpr int shadowSize=1024;
+struct ShadowMap { GLuint texture=0, bufferQuadro=0; };
+constexpr int tamanhoSombra=1024;
 
 struct Renderer {
-    GLuint program=0, depthProgram=0;
-    ShadowMap sunMap, lampMap;
-    std::vector<GpuMesh> meshes;
-    std::vector<GLuint> textures;
-    std::vector<Material> materials=makeMaterials();
-    GLint projection, view, modelMatrix, color, material, eye, ambient, natural, artificial;
-    GLint outdoorLight, outdoor, glass;
-    GLint naturalPositionUniform, sunOpening, sunBoundaryX;
-    GLint naturalShadowMatrix, lampShadowMatrix, shadowActive;
-    GLint depthLightMatrix, depthModelMatrix;
-    GpuMesh hud;
+    GLuint programa=0, programaProfundidade=0;
+    ShadowMap mapaSol, mapaLuminaria;
+    std::vector<GpuMesh> malhas;
+    std::vector<GLuint> texturas;
+    std::vector<Material> materiais=makeMaterials();
+    GLint projecao, visao, matrizModelo, cor, material, olho, ambiente, natural, artificial;
+    GLint luzExterna, externo, vidro;
+    GLint posicaoNaturalUniforme, aberturaSol, limiteSolX;
+    GLint matrizSombraNatural, matrizSombraLuminaria, sombraAtiva;
+    GLint matrizLuzProfundidade, matrizModeloProfundidade;
+    GpuMesh painel;
 
     Renderer() {
-        program=makeProgram();
-        depthProgram=makeDepthProgram();
-        glUseProgramPtr(program);
-        projection=glGetUniformLocationPtr(program,"uProjection");
-        view=glGetUniformLocationPtr(program,"uView");
-        modelMatrix=glGetUniformLocationPtr(program,"uModel");
-        color=glGetUniformLocationPtr(program,"uColor");
-        material=glGetUniformLocationPtr(program,"uMaterial");
-        eye=glGetUniformLocationPtr(program,"uCamera");
-        ambient=glGetUniformLocationPtr(program,"uAmbient");
-        natural=glGetUniformLocationPtr(program,"uNatural");
-        naturalPositionUniform=glGetUniformLocationPtr(program,"uNaturalPosition");
-        sunOpening=glGetUniformLocationPtr(program,"uSunOpening");
-        sunBoundaryX=glGetUniformLocationPtr(program,"uSunBoundaryX");
-        artificial=glGetUniformLocationPtr(program,"uArtificial");
-        naturalShadowMatrix=glGetUniformLocationPtr(program,"uNaturalShadowMatrix");
-        lampShadowMatrix=glGetUniformLocationPtr(program,"uLampShadowMatrix");
-        shadowActive=glGetUniformLocationPtr(program,"uShadowActive");
-        outdoorLight=glGetUniformLocationPtr(program,"uOutdoorLight");
-        outdoor=glGetUniformLocationPtr(program,"uOutdoor");
-        glass=glGetUniformLocationPtr(program,"uGlass");
-        glUniform3fPtr(glGetUniformLocationPtr(program,"uLampPosition"),
+        programa=makeProgram();
+        programaProfundidade=makeDepthProgram();
+        glUseProgramPtr(programa);
+        projecao=glGetUniformLocationPtr(programa,"uProjection");
+        visao=glGetUniformLocationPtr(programa,"uView");
+        matrizModelo=glGetUniformLocationPtr(programa,"uModel");
+        cor=glGetUniformLocationPtr(programa,"uColor");
+        material=glGetUniformLocationPtr(programa,"uMaterial");
+        olho=glGetUniformLocationPtr(programa,"uCamera");
+        ambiente=glGetUniformLocationPtr(programa,"uAmbient");
+        natural=glGetUniformLocationPtr(programa,"uNatural");
+        posicaoNaturalUniforme=glGetUniformLocationPtr(programa,"uNaturalPosition");
+        aberturaSol=glGetUniformLocationPtr(programa,"uSunOpening");
+        limiteSolX=glGetUniformLocationPtr(programa,"uSunBoundaryX");
+        artificial=glGetUniformLocationPtr(programa,"uArtificial");
+        matrizSombraNatural=glGetUniformLocationPtr(programa,"uNaturalShadowMatrix");
+        matrizSombraLuminaria=glGetUniformLocationPtr(programa,"uLampShadowMatrix");
+        sombraAtiva=glGetUniformLocationPtr(programa,"uShadowActive");
+        luzExterna=glGetUniformLocationPtr(programa,"uOutdoorLight");
+        externo=glGetUniformLocationPtr(programa,"uOutdoor");
+        vidro=glGetUniformLocationPtr(programa,"uGlass");
+        glUniform3fPtr(glGetUniformLocationPtr(programa,"uLampPosition"),
                        lampEmitter.x,lampEmitter.y,lampEmitter.z);
-        glUniform3fPtr(glGetUniformLocationPtr(program,"uLampDirection"),
+        glUniform3fPtr(glGetUniformLocationPtr(programa,"uLampDirection"),
                        lampDirection.x,lampDirection.y,lampDirection.z);
-        glUniform3fPtr(glGetUniformLocationPtr(program,"uLampCone"),
+        glUniform3fPtr(glGetUniformLocationPtr(programa,"uLampCone"),
                        lampConeOuterCos,lampConeInnerCos,0.f);
-        glUniform1iPtr(glGetUniformLocationPtr(program,"uTexture"),0);
-        glUniform1iPtr(glGetUniformLocationPtr(program,"uNaturalShadowMap"),1);
-        glUniform1iPtr(glGetUniformLocationPtr(program,"uLampShadowMap"),2);
-        glUseProgramPtr(depthProgram);
-        depthLightMatrix=glGetUniformLocationPtr(depthProgram,"uLightMatrix");
-        depthModelMatrix=glGetUniformLocationPtr(depthProgram,"uModel");
-        glUseProgramPtr(program);
+        glUniform1iPtr(glGetUniformLocationPtr(programa,"uTexture"),0);
+        glUniform1iPtr(glGetUniformLocationPtr(programa,"uNaturalShadowMap"),1);
+        glUniform1iPtr(glGetUniformLocationPtr(programa,"uLampShadowMap"),2);
+        glUseProgramPtr(programaProfundidade);
+        matrizLuzProfundidade=glGetUniformLocationPtr(programaProfundidade,"uLightMatrix");
+        matrizModeloProfundidade=glGetUniformLocationPtr(programaProfundidade,"uModel");
+        glUseProgramPtr(programa);
         for (int i=0;i<int(MeshKind::Count);++i) {
             auto vertices=makeMesh(static_cast<MeshKind>(i));
-            GpuMesh mesh;
-            mesh.count=static_cast<GLsizei>(vertices.size());
-            glGenVertexArraysPtr(1,&mesh.vao);
-            glGenBuffersPtr(1,&mesh.vbo);
-            glBindVertexArrayPtr(mesh.vao);
-            glBindBufferPtr(GL_ARRAY_BUFFER,mesh.vbo);
+            GpuMesh malha;
+            malha.count=static_cast<GLsizei>(vertices.size());
+            glGenVertexArraysPtr(1,&malha.vao);
+            glGenBuffersPtr(1,&malha.vbo);
+            glBindVertexArrayPtr(malha.vao);
+            glBindBufferPtr(GL_ARRAY_BUFFER,malha.vbo);
             glBufferDataPtr(GL_ARRAY_BUFFER,static_cast<GLsizeiptr>(vertices.size()*sizeof(Vertex)),vertices.data(),GL_STATIC_DRAW);
-            const std::size_t offsets[]={offsetof(Vertex,position),offsetof(Vertex,normal),offsetof(Vertex,color),offsetof(Vertex,uv)};
+            const std::size_t deslocamentos[]={offsetof(Vertex,posicao),offsetof(Vertex,normal),offsetof(Vertex,cor),offsetof(Vertex,uv)};
             for (GLuint a=0;a<4;++a) {
                 glEnableVertexAttribArrayPtr(a);
-                glVertexAttribPointerPtr(a,a==3?2:3,GL_FLOAT,GL_FALSE,sizeof(Vertex),reinterpret_cast<void*>(offsets[a]));
+                glVertexAttribPointerPtr(a,a==3?2:3,GL_FLOAT,GL_FALSE,sizeof(Vertex),reinterpret_cast<void*>(deslocamentos[a]));
             }
-            meshes.push_back(mesh);
+            malhas.push_back(malha);
         }
-        glGenVertexArraysPtr(1,&hud.vao);
-        glGenBuffersPtr(1,&hud.vbo);
-        glBindVertexArrayPtr(hud.vao);
-        glBindBufferPtr(GL_ARRAY_BUFFER,hud.vbo);
-        const std::size_t offsets[]={offsetof(Vertex,position),offsetof(Vertex,normal),offsetof(Vertex,color),offsetof(Vertex,uv)};
+        glGenVertexArraysPtr(1,&painel.vao);
+        glGenBuffersPtr(1,&painel.vbo);
+        glBindVertexArrayPtr(painel.vao);
+        glBindBufferPtr(GL_ARRAY_BUFFER,painel.vbo);
+        const std::size_t deslocamentos[]={offsetof(Vertex,posicao),offsetof(Vertex,normal),offsetof(Vertex,cor),offsetof(Vertex,uv)};
         for (GLuint a=0;a<4;++a) {
             glEnableVertexAttribArrayPtr(a);
-            glVertexAttribPointerPtr(a,a==3?2:3,GL_FLOAT,GL_FALSE,sizeof(Vertex),reinterpret_cast<void*>(offsets[a]));
+            glVertexAttribPointerPtr(a,a==3?2:3,GL_FLOAT,GL_FALSE,sizeof(Vertex),reinterpret_cast<void*>(deslocamentos[a]));
         }
         for (int i=0;i<int(TextureKind::Count);++i) {
             GLuint texture;
             glGenTextures(1,&texture);
             glBindTexture(GL_TEXTURE_2D,texture);
             constexpr int size=256;
-            const TextureKind kind=static_cast<TextureKind>(i);
-            ImageData image;
-            if (kind==TextureKind::Art) image=loadArtworkImage();
-            else image={size,size,makeTexture(kind,size)};
+            const TextureKind tipo=static_cast<TextureKind>(i);
+            ImageData imagem;
+            if (tipo==TextureKind::Art) imagem=loadArtworkImage();
+            else imagem={size,size,makeTexture(tipo,size)};
             glPixelStorei(GL_UNPACK_ALIGNMENT,1);
-            glTexImage2D(GL_TEXTURE_2D,0,GL_RGB8,image.width,image.height,0,
-                         GL_RGB,GL_UNSIGNED_BYTE,image.pixels.data());
+            glTexImage2D(GL_TEXTURE_2D,0,GL_RGB8,imagem.largura,imagem.altura,0,
+                         GL_RGB,GL_UNSIGNED_BYTE,imagem.pixels.data());
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
             glGenerateMipmapPtr(GL_TEXTURE_2D);
-            textures.push_back(texture);
+            texturas.push_back(texture);
         }
-        auto makeShadowMap=[&](ShadowMap& map) {
-            glGenTextures(1,&map.texture);
-            glBindTexture(GL_TEXTURE_2D,map.texture);
-            glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,shadowSize,shadowSize,
+        auto makeShadowMap=[&](ShadowMap& mapa) {
+            glGenTextures(1,&mapa.texture);
+            glBindTexture(GL_TEXTURE_2D,mapa.texture);
+            glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,tamanhoSombra,tamanhoSombra,
                          0,GL_DEPTH_COMPONENT,GL_UNSIGNED_INT,nullptr);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
-            const GLfloat darkBorder[]={0,0,0,0};
-            glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,darkBorder);
-            glGenFramebuffersPtr(1,&map.framebuffer);
-            glBindFramebufferPtr(GL_FRAMEBUFFER,map.framebuffer);
-            glFramebufferTexture2DPtr(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,map.texture,0);
+            const GLfloat bordaEscura[]={0,0,0,0};
+            glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,bordaEscura);
+            glGenFramebuffersPtr(1,&mapa.bufferQuadro);
+            glBindFramebufferPtr(GL_FRAMEBUFFER,mapa.bufferQuadro);
+            glFramebufferTexture2DPtr(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,mapa.texture,0);
             glDrawBuffer(GL_NONE);
             glReadBuffer(GL_NONE);
             if (glCheckFramebufferStatusPtr(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE)
                 throw std::runtime_error("Framebuffer do mapa de sombras incompleto.");
         };
-        makeShadowMap(sunMap);
-        makeShadowMap(lampMap);
+        makeShadowMap(mapaSol);
+        makeShadowMap(mapaLuminaria);
         glBindFramebufferPtr(GL_FRAMEBUFFER,0);
         glDrawBuffer(GL_BACK);
         glReadBuffer(GL_BACK);
@@ -423,423 +423,423 @@ struct Renderer {
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    void drawPart(const Scene& scene, const Part& part) {
-        const Mat4 transform=partModel(scene,part);
-        auto m=materials[static_cast<int>(part.material)];
-        if (part.object=="luminaria" && part.material==MaterialId::Light && !scene.lampOn) {
-            m.emission=0;
-            m.color={.62f,.61f,.55f};
+    void drawPart(const Scene& cena, const Part& parte) {
+        const Mat4 transformacao=partModel(cena,parte);
+        auto m=materiais[static_cast<int>(parte.material)];
+        if (parte.objeto=="luminaria" && parte.material==MaterialId::Light && !cena.luminariaLigada) {
+            m.emissao=0;
+            m.cor={.62f,.61f,.55f};
         }
-        if (part.object=="sol" && scene.period==DayPeriod::Afternoon)
-            m.color={1.f,.53f,.28f};
-        const auto& mesh=meshes[static_cast<int>(part.mesh)];
-        glUniformMatrix4fvPtr(modelMatrix,1,GL_FALSE,transform.values.data());
-        glUniform4fPtr(color,m.color.x,m.color.y,m.color.z,m.alpha);
-        glUniform3fPtr(material,m.specular,m.shininess,m.emission);
-        glUniform1iPtr(outdoor,part.outdoor ? 1 : 0);
-        glUniform1iPtr(glass,part.material==MaterialId::Glass ? 1 : 0);
-        glBindTexture(GL_TEXTURE_2D,textures[static_cast<int>(m.texture)]);
-        glBindVertexArrayPtr(mesh.vao);
-        glDrawArrays(GL_TRIANGLES,0,mesh.count);
+        if (parte.objeto=="sol" && cena.periodo==DayPeriod::Afternoon)
+            m.cor={1.f,.53f,.28f};
+        const auto& malha=malhas[static_cast<int>(parte.malha)];
+        glUniformMatrix4fvPtr(matrizModelo,1,GL_FALSE,transformacao.valores.data());
+        glUniform4fPtr(cor,m.cor.x,m.cor.y,m.cor.z,m.alpha);
+        glUniform3fPtr(material,m.especular,m.brilho,m.emissao);
+        glUniform1iPtr(externo,parte.externo ? 1 : 0);
+        glUniform1iPtr(vidro,parte.material==MaterialId::Glass ? 1 : 0);
+        glBindTexture(GL_TEXTURE_2D,texturas[static_cast<int>(m.texture)]);
+        glBindVertexArrayPtr(malha.vao);
+        glDrawArrays(GL_TRIANGLES,0,malha.count);
     }
 
-    void renderShadow(const Scene& scene, const ShadowMap& map, const Mat4& lightMatrix) {
-        glBindFramebufferPtr(GL_FRAMEBUFFER,map.framebuffer);
-        glViewport(0,0,shadowSize,shadowSize);
+    void renderShadow(const Scene& cena, const ShadowMap& mapa, const Mat4& matrizLuz) {
+        glBindFramebufferPtr(GL_FRAMEBUFFER,mapa.bufferQuadro);
+        glViewport(0,0,tamanhoSombra,tamanhoSombra);
         glClear(GL_DEPTH_BUFFER_BIT);
-        glUseProgramPtr(depthProgram);
-        glUniformMatrix4fvPtr(depthLightMatrix,1,GL_FALSE,lightMatrix.values.data());
+        glUseProgramPtr(programaProfundidade);
+        glUniformMatrix4fvPtr(matrizLuzProfundidade,1,GL_FALSE,matrizLuz.valores.data());
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.5f,2.f);
-        for (const auto& part : scene.parts) {
-            const bool shell=part.mesh==MeshKind::Shell;
-            const bool furniture=part.object=="cama" || part.object=="mesa" ||
-                                 part.object=="cadeira" || part.object=="guarda-roupas";
-            const bool moving=part.group==Group::Door || part.group==Group::Window ||
-                              part.group==Group::Ball;
-            if (part.outdoor || !visiblePart(scene,part) ||
-                (!shell && !furniture && !moving) ||
-                materials[static_cast<int>(part.material)].alpha<.99f) continue;
-            const Mat4 transform=partModel(scene,part);
-            glUniformMatrix4fvPtr(depthModelMatrix,1,GL_FALSE,transform.values.data());
-            const auto& mesh=meshes[static_cast<int>(part.mesh)];
-            glBindVertexArrayPtr(mesh.vao);
-            glDrawArrays(GL_TRIANGLES,0,mesh.count);
+        for (const auto& parte : cena.partes) {
+            const bool estrutura=parte.malha==MeshKind::Shell;
+            const bool movel=parte.objeto=="cama" || parte.objeto=="mesa" ||
+                                 parte.objeto=="cadeira" || parte.objeto=="guarda-roupas";
+            const bool movendo=parte.grupo==Group::Door || parte.grupo==Group::Window ||
+                              parte.grupo==Group::Ball;
+            if (parte.externo || !visiblePart(cena,parte) ||
+                (!estrutura && !movel && !movendo) ||
+                materiais[static_cast<int>(parte.material)].alpha<.99f) continue;
+            const Mat4 transformacao=partModel(cena,parte);
+            glUniformMatrix4fvPtr(matrizModeloProfundidade,1,GL_FALSE,transformacao.valores.data());
+            const auto& malha=malhas[static_cast<int>(parte.malha)];
+            glBindVertexArrayPtr(malha.vao);
+            glDrawArrays(GL_TRIANGLES,0,malha.count);
         }
         glDisable(GL_POLYGON_OFFSET_FILL);
     }
 
-    void draw(const Scene& scene, Vec3 camera, const Mat4& projectionMatrix,
-              const Mat4& viewMatrix, int width, int height) {
-        const Vec3 sun=naturalPosition(scene.period);
-        const Mat4 sunMatrix=perspective(120.f*pi/180.f,1.f,.2f,25.f)*
-                             lookAt(sun,{4.25f,1.f,2.375f});
-        const Mat4 lampMatrix=perspective(2.f*std::acos(lampConeOuterCos)+.04f,
+    void draw(const Scene& cena, Vec3 camera, const Mat4& matrizProjecao,
+              const Mat4& matrizVisao, int largura, int altura) {
+        const Vec3 sol=naturalPosition(cena.periodo);
+        const Mat4 matrizSol=perspective(120.f*pi/180.f,1.f,.2f,25.f)*
+                             lookAt(sol,{4.25f,1.f,2.375f});
+        const Mat4 matrizLuminaria=perspective(2.f*std::acos(lampConeOuterCos)+.04f,
                                           1.f,.04f,9.f)*
                               lookAt(lampEmitter,lampEmitter+lampDirection);
-        renderShadow(scene,sunMap,sunMatrix);
-        if (scene.lampOn) renderShadow(scene,lampMap,lampMatrix);
+        renderShadow(cena,mapaSol,matrizSol);
+        if (cena.luminariaLigada) renderShadow(cena,mapaLuminaria,matrizLuminaria);
         glBindFramebufferPtr(GL_FRAMEBUFFER,0);
         glDrawBuffer(GL_BACK);
-        glViewport(0,0,width,height);
+        glViewport(0,0,largura,altura);
         glActiveTexturePtr(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D,sunMap.texture);
+        glBindTexture(GL_TEXTURE_2D,mapaSol.texture);
         glActiveTexturePtr(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D,lampMap.texture);
+        glBindTexture(GL_TEXTURE_2D,mapaLuminaria.texture);
         glActiveTexturePtr(GL_TEXTURE0);
-        glUseProgramPtr(program);
-        glUniformMatrix4fvPtr(projection,1,GL_FALSE,projectionMatrix.values.data());
-        glUniformMatrix4fvPtr(view,1,GL_FALSE,viewMatrix.values.data());
-        glUniformMatrix4fvPtr(naturalShadowMatrix,1,GL_FALSE,sunMatrix.values.data());
-        glUniformMatrix4fvPtr(lampShadowMatrix,1,GL_FALSE,lampMatrix.values.data());
-        glUniform3fPtr(shadowActive,1.f,
-                       scene.lampOn?1.f:0.f,0.f);
-        glUniform3fPtr(naturalPositionUniform,sun.x,sun.y,sun.z);
-        if (scene.period==DayPeriod::Afternoon) {
-            glUniform4fPtr(sunOpening,0.f,doorTop,doorZMin,doorZMax);
-            glUniform1fPtr(sunBoundaryX,roomWidth);
+        glUseProgramPtr(programa);
+        glUniformMatrix4fvPtr(projecao,1,GL_FALSE,matrizProjecao.valores.data());
+        glUniformMatrix4fvPtr(visao,1,GL_FALSE,matrizVisao.valores.data());
+        glUniformMatrix4fvPtr(matrizSombraNatural,1,GL_FALSE,matrizSol.valores.data());
+        glUniformMatrix4fvPtr(matrizSombraLuminaria,1,GL_FALSE,matrizLuminaria.valores.data());
+        glUniform3fPtr(sombraAtiva,1.f,
+                       cena.luminariaLigada?1.f:0.f,0.f);
+        glUniform3fPtr(posicaoNaturalUniforme,sol.x,sol.y,sol.z);
+        if (cena.periodo==DayPeriod::Afternoon) {
+            glUniform4fPtr(aberturaSol,0.f,topoPorta,portaZMin,portaZMax);
+            glUniform1fPtr(limiteSolX,larguraQuarto);
         } else {
-            glUniform4fPtr(sunOpening,windowBottom,windowTop,windowZMin,windowZMax);
-            glUniform1fPtr(sunBoundaryX,0.f);
+            glUniform4fPtr(aberturaSol,baseJanela,topoJanela,janelaZMin,janelaZMax);
+            glUniform1fPtr(limiteSolX,0.f);
         }
-        glUniform3fPtr(eye,camera.x,camera.y,camera.z);
-        const Lighting lights=lightingFor(scene);
-        glUniform3fPtr(ambient,lights.ambient.x,lights.ambient.y,lights.ambient.z);
-        glUniform3fPtr(natural,lights.natural.x,lights.natural.y,lights.natural.z);
-        glUniform3fPtr(artificial,lights.artificial.x,lights.artificial.y,lights.artificial.z);
-        Vec3 gardenLight{1.12f,1.12f,1.05f};
-        if (scene.period==DayPeriod::Afternoon) gardenLight={1.05f,.72f,.49f};
-        if (scene.period==DayPeriod::Night) gardenLight={.16f,.23f,.36f};
-        glUniform3fPtr(outdoorLight,gardenLight.x,gardenLight.y,gardenLight.z);
-        std::vector<const Part*> transparent;
-        for (const auto& part : scene.parts) {
-            if (!visiblePart(scene,part)) continue;
-            if (materials[static_cast<int>(part.material)].alpha<1) transparent.push_back(&part);
-            else drawPart(scene,part);
+        glUniform3fPtr(olho,camera.x,camera.y,camera.z);
+        const Lighting luzes=lightingFor(cena);
+        glUniform3fPtr(ambiente,luzes.ambiente.x,luzes.ambiente.y,luzes.ambiente.z);
+        glUniform3fPtr(natural,luzes.natural.x,luzes.natural.y,luzes.natural.z);
+        glUniform3fPtr(artificial,luzes.artificial.x,luzes.artificial.y,luzes.artificial.z);
+        Vec3 luzJardim{1.12f,1.12f,1.05f};
+        if (cena.periodo==DayPeriod::Afternoon) luzJardim={1.05f,.72f,.49f};
+        if (cena.periodo==DayPeriod::Night) luzJardim={.16f,.23f,.36f};
+        glUniform3fPtr(luzExterna,luzJardim.x,luzJardim.y,luzJardim.z);
+        std::vector<const Part*> transparentes;
+        for (const auto& parte : cena.partes) {
+            if (!visiblePart(cena,parte)) continue;
+            if (materiais[static_cast<int>(parte.material)].alpha<1) transparentes.push_back(&parte);
+            else drawPart(cena,parte);
         }
-        auto distance=[&](const Part* p) {
-            Vec3 delta=transformPoint(partModel(scene,*p),{0,0,0})-camera;
-            return dot(delta,delta);
+        auto distancia=[&](const Part* p) {
+            Vec3 deslocamento=transformPoint(partModel(cena,*p),{0,0,0})-camera;
+            return dot(deslocamento,deslocamento);
         };
-        std::sort(transparent.begin(),transparent.end(),[&](const Part* a,const Part* b){return distance(a)>distance(b);});
+        std::sort(transparentes.begin(),transparentes.end(),[&](const Part* a,const Part* b){return distancia(a)>distancia(b);});
         glEnable(GL_BLEND);
         glDepthMask(GL_FALSE);
-        for (const Part* part : transparent) drawPart(scene,*part);
+        for (const Part* parte : transparentes) drawPart(cena,*parte);
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
     }
 
-    void drawHud(int width, int height, const Scene& scene, Interaction target) {
-        const auto vertices=makeHud(width,height,scene,target);
-        const auto unit=identity();
+    void drawHud(int largura, int altura, const Scene& cena, Interaction alvo) {
+        const auto vertices=makeHud(largura,altura,cena,alvo);
+        const auto unidade=identity();
         glDisable(GL_DEPTH_TEST);
-        glUniformMatrix4fvPtr(projection,1,GL_FALSE,unit.values.data());
-        glUniformMatrix4fvPtr(view,1,GL_FALSE,unit.values.data());
-        glUniformMatrix4fvPtr(modelMatrix,1,GL_FALSE,unit.values.data());
-        glUniform4fPtr(color,1,1,1,1);
+        glUniformMatrix4fvPtr(projecao,1,GL_FALSE,unidade.valores.data());
+        glUniformMatrix4fvPtr(visao,1,GL_FALSE,unidade.valores.data());
+        glUniformMatrix4fvPtr(matrizModelo,1,GL_FALSE,unidade.valores.data());
+        glUniform4fPtr(cor,1,1,1,1);
         glUniform3fPtr(material,0,1,1);
-        glUniform1iPtr(outdoor,0);
-        glUniform1iPtr(glass,0);
-        glBindTexture(GL_TEXTURE_2D,textures[static_cast<int>(TextureKind::White)]);
-        glBindVertexArrayPtr(hud.vao);
-        glBindBufferPtr(GL_ARRAY_BUFFER,hud.vbo);
+        glUniform1iPtr(externo,0);
+        glUniform1iPtr(vidro,0);
+        glBindTexture(GL_TEXTURE_2D,texturas[static_cast<int>(TextureKind::White)]);
+        glBindVertexArrayPtr(painel.vao);
+        glBindBufferPtr(GL_ARRAY_BUFFER,painel.vbo);
         glBufferDataPtr(GL_ARRAY_BUFFER,static_cast<GLsizeiptr>(vertices.size()*sizeof(Vertex)),vertices.data(),GL_DYNAMIC_DRAW);
         glDrawArrays(GL_TRIANGLES,0,static_cast<GLsizei>(vertices.size()));
         glEnable(GL_DEPTH_TEST);
     }
 
     void release() {
-        glDeleteBuffersPtr(1,&hud.vbo);
-        glDeleteVertexArraysPtr(1,&hud.vao);
-        for (auto mesh : meshes) {
-            glDeleteBuffersPtr(1,&mesh.vbo);
-            glDeleteVertexArraysPtr(1,&mesh.vao);
+        glDeleteBuffersPtr(1,&painel.vbo);
+        glDeleteVertexArraysPtr(1,&painel.vao);
+        for (auto malha : malhas) {
+            glDeleteBuffersPtr(1,&malha.vbo);
+            glDeleteVertexArraysPtr(1,&malha.vao);
         }
-        glDeleteTextures(static_cast<GLsizei>(textures.size()),textures.data());
-        glDeleteTextures(1,&sunMap.texture);
-        glDeleteTextures(1,&lampMap.texture);
-        glDeleteFramebuffersPtr(1,&sunMap.framebuffer);
-        glDeleteFramebuffersPtr(1,&lampMap.framebuffer);
-        glDeleteProgramPtr(depthProgram);
-        glDeleteProgramPtr(program);
+        glDeleteTextures(static_cast<GLsizei>(texturas.size()),texturas.data());
+        glDeleteTextures(1,&mapaSol.texture);
+        glDeleteTextures(1,&mapaLuminaria.texture);
+        glDeleteFramebuffersPtr(1,&mapaSol.bufferQuadro);
+        glDeleteFramebuffersPtr(1,&mapaLuminaria.bufferQuadro);
+        glDeleteProgramPtr(programaProfundidade);
+        glDeleteProgramPtr(programa);
     }
 };
 
-// Capturas do framebuffer permitem conferir a cena sem depender do foco do mouse.
-void saveFrame(const char* name, int width, int height) {
-    const int stride=(width*3+3)&~3;
-    std::vector<unsigned char> pixels(stride*height);
+// Capturas do bufferQuadro permitem conferir a cena sem depender do foco do mouse.
+void saveFrame(const char* nome, int largura, int altura) {
+    const int passoLinha=(largura*3+3)&~3;
+    std::vector<unsigned char> pixels(passoLinha*altura);
     glPixelStorei(GL_PACK_ALIGNMENT,4);
     glReadBuffer(GL_BACK);
-    glReadPixels(0,0,width,height,GL_BGR,GL_UNSIGNED_BYTE,pixels.data());
-    BITMAPFILEHEADER file{};
-    BITMAPINFOHEADER info{};
-    file.bfType=0x4D42;
-    file.bfOffBits=sizeof(file)+sizeof(info);
-    file.bfSize=file.bfOffBits+static_cast<DWORD>(pixels.size());
-    info.biSize=sizeof(info); info.biWidth=width; info.biHeight=height;
-    info.biPlanes=1; info.biBitCount=24; info.biCompression=BI_RGB;
-    std::ofstream out(name,std::ios::binary);
-    out.write(reinterpret_cast<const char*>(&file),sizeof(file));
-    out.write(reinterpret_cast<const char*>(&info),sizeof(info));
+    glReadPixels(0,0,largura,altura,GL_BGR,GL_UNSIGNED_BYTE,pixels.data());
+    BITMAPFILEHEADER arquivo{};
+    BITMAPINFOHEADER informacoes{};
+    arquivo.bfType=0x4D42;
+    arquivo.bfOffBits=sizeof(arquivo)+sizeof(informacoes);
+    arquivo.bfSize=arquivo.bfOffBits+static_cast<DWORD>(pixels.size());
+    informacoes.biSize=sizeof(informacoes); informacoes.biWidth=largura; informacoes.biHeight=altura;
+    informacoes.biPlanes=1; informacoes.biBitCount=24; informacoes.biCompression=BI_RGB;
+    std::ofstream out(nome,std::ios::binary);
+    out.write(reinterpret_cast<const char*>(&arquivo),sizeof(arquivo));
+    out.write(reinterpret_cast<const char*>(&informacoes),sizeof(informacoes));
     out.write(reinterpret_cast<const char*>(pixels.data()),static_cast<std::streamsize>(pixels.size()));
-    if (!out) throw std::runtime_error(std::string("Falha ao salvar captura: ")+name);
+    if (!out) throw std::runtime_error(std::string("Falha ao salvar captura: ")+nome);
 }
 
-HWND window = nullptr;
-bool running = true;
-bool focused = true;
-bool cursorCaptured = false;
-bool resetMouse = true;
-int windowWidth = 1280;
-int windowHeight = 720;
-std::vector<char> commands;
+HWND janela = nullptr;
+bool executando = true;
+bool comFoco = true;
+bool cursorCapturado = false;
+bool redefinirMouse = true;
+int larguraJanela = 1280;
+int alturaJanela = 720;
+std::vector<char> comandos;
 
-void captureCursor(bool capture) {
-    if (capture == cursorCaptured) return;
-    ShowCursor(capture ? FALSE : TRUE);
-    cursorCaptured = capture;
-    if (capture) resetMouse = true;
+void captureCursor(bool capturar) {
+    if (capturar == cursorCapturado) return;
+    ShowCursor(capturar ? FALSE : TRUE);
+    cursorCapturado = capturar;
+    if (capturar) redefinirMouse = true;
 }
 
-LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
+LRESULT CALLBACK windowProc(HWND hwnd, UINT mensagem, WPARAM wParam, LPARAM lParam) {
+    switch (mensagem) {
     case WM_SIZE:
-        windowWidth = LOWORD(lParam);
-        windowHeight = HIWORD(lParam);
-        resetMouse = true;
+        larguraJanela = LOWORD(lParam);
+        alturaJanela = HIWORD(lParam);
+        redefinirMouse = true;
         return 0;
     case WM_MOVE:
-        resetMouse = true;
+        redefinirMouse = true;
         return 0;
     case WM_SETFOCUS:
-        focused = true;
+        comFoco = true;
         captureCursor(true);
         return 0;
     case WM_KILLFOCUS:
-        focused = false;
-        commands.clear();
+        comFoco = false;
+        comandos.clear();
         captureCursor(false);
         return 0;
     case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE) running = false;
+        if (wParam == VK_ESCAPE) executando = false;
         if (!(lParam & (1LL<<30)) && (wParam=='E' || (wParam>='1' && wParam<='3')))
-            commands.push_back(static_cast<char>(wParam));
+            comandos.push_back(static_cast<char>(wParam));
         return 0;
     case WM_CLOSE:
-        running = false;
+        executando = false;
         return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
     default:
-        return DefWindowProcW(hwnd, message, wParam, lParam);
+        return DefWindowProcW(hwnd, mensagem, wParam, lParam);
     }
 }
 
 void centerCursor() {
-    RECT client{};
-    GetClientRect(window, &client);
-    POINT center{(client.right - client.left) / 2, (client.bottom - client.top) / 2};
-    ClientToScreen(window, &center);
-    SetCursorPos(center.x, center.y);
+    RECT cliente{};
+    GetClientRect(janela, &cliente);
+    POINT centro{(cliente.right - cliente.left) / 2, (cliente.bottom - cliente.top) / 2};
+    ClientToScreen(janela, &centro);
+    SetCursorPos(centro.x, centro.y);
 }
 
 void verifyWindowEvents() {
-    commands.clear();
-    PostMessageW(window,WM_KEYDOWN,'E',0);
-    PostMessageW(window,WM_KEYDOWN,'E',1LL<<30); // Autorrepeticao deve ser ignorada.
-    for (char key : {'2','3','1'}) PostMessageW(window,WM_KEYDOWN,key,0);
-    MSG message{};
-    while (PeekMessageW(&message,nullptr,0,0,PM_REMOVE)) DispatchMessageW(&message);
-    if (std::string(commands.begin(),commands.end())!="E231")
+    comandos.clear();
+    PostMessageW(janela,WM_KEYDOWN,'E',0);
+    PostMessageW(janela,WM_KEYDOWN,'E',1LL<<30); // Autorrepeticao deve ser ignorada.
+    for (char tecla : {'2','3','1'}) PostMessageW(janela,WM_KEYDOWN,tecla,0);
+    MSG mensagem{};
+    while (PeekMessageW(&mensagem,nullptr,0,0,PM_REMOVE)) DispatchMessageW(&mensagem);
+    if (std::string(comandos.begin(),comandos.end())!="E231")
         throw std::runtime_error("Falha no despacho de teclas/autorrepeticao Win32.");
-    Scene probe=makeScene();
-    Vec3 camera{7,1.65f,4.2f}, target{8.46f,1.1f,4.075f};
-    for (char key : commands) applyCommand(probe,key,camera,normalized(target-camera));
-    if (!probe.doorOpen || probe.period!=DayPeriod::Morning)
+    Scene sonda=makeScene();
+    Vec3 camera{7,1.65f,4.2f}, alvo{8.46f,1.1f,4.075f};
+    for (char tecla : comandos) applyCommand(sonda,tecla,camera,normalized(alvo-camera));
+    if (!sonda.portaAberta || sonda.periodo!=DayPeriod::Morning)
         throw std::runtime_error("Eventos Win32 nao chegaram as acoes.");
-    commands.clear();
-    RECT before{},client{};
-    GetWindowRect(window,&before);
-    MoveWindow(window,before.left,before.top,820,580,FALSE);
-    GetClientRect(window,&client);
-    if (windowWidth!=client.right || windowHeight!=client.bottom || !resetMouse)
+    comandos.clear();
+    RECT antes{},cliente{};
+    GetWindowRect(janela,&antes);
+    MoveWindow(janela,antes.left,antes.top,820,580,FALSE);
+    GetClientRect(janela,&cliente);
+    if (larguraJanela!=cliente.right || alturaJanela!=cliente.bottom || !redefinirMouse)
         throw std::runtime_error("Redimensionamento nao atualizou o viewport.");
-    MoveWindow(window,before.left,before.top,before.right-before.left,before.bottom-before.top,FALSE);
-    commands.push_back('E');
-    SendMessageW(window,WM_KILLFOCUS,0,0);
-    if (!commands.empty() || cursorCaptured)
+    MoveWindow(janela,antes.left,antes.top,antes.right-antes.left,antes.bottom-antes.top,FALSE);
+    comandos.push_back('E');
+    SendMessageW(janela,WM_KILLFOCUS,0,0);
+    if (!comandos.empty() || cursorCapturado)
         throw std::runtime_error("Perda de foco nao limpou entrada/cursor.");
     std::cout << "OK: eventos Win32 E/1/2/3, autorrepeticao, tamanho e perda de foco.\n";
 }
 
-int run(bool verify) {
+int run(bool verificar) {
     SetProcessDPIAware();
-    if (verify) { windowWidth=960; windowHeight=640; }
-    const HINSTANCE instance = GetModuleHandleW(nullptr);
-    WNDCLASSW klass{};
-    klass.lpfnWndProc = windowProc;
-    klass.hInstance = instance;
-    klass.lpszClassName = L"QuartoOpenGL";
-    klass.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    if (!RegisterClassW(&klass)) throw std::runtime_error("Falha ao registrar a janela.");
+    if (verificar) { larguraJanela=960; alturaJanela=640; }
+    const HINSTANCE instancia = GetModuleHandleW(nullptr);
+    WNDCLASSW classeJanela{};
+    classeJanela.lpfnWndProc = windowProc;
+    classeJanela.hInstance = instancia;
+    classeJanela.lpszClassName = L"QuartoOpenGL";
+    classeJanela.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    if (!RegisterClassW(&classeJanela)) throw std::runtime_error("Falha ao registrar a janela.");
 
-    const DWORD style = WS_OVERLAPPEDWINDOW;
-    RECT bounds{0, 0, windowWidth, windowHeight};
-    AdjustWindowRect(&bounds, style, FALSE);
-    window = CreateWindowExW(0, klass.lpszClassName, L"Quarto Interativo",
-                             style, CW_USEDEFAULT, CW_USEDEFAULT,
-                             bounds.right - bounds.left, bounds.bottom - bounds.top,
-                             nullptr, nullptr, instance, nullptr);
-    if (!window) throw std::runtime_error("Falha ao criar a janela.");
-    HDC dc = GetDC(window);
-    PIXELFORMATDESCRIPTOR pfd{};
-    pfd.nSize = sizeof(pfd);
-    pfd.nVersion = 1;
-    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-    pfd.iPixelType = PFD_TYPE_RGBA;
-    pfd.cColorBits = 32;
-    pfd.cDepthBits = 24;
-    pfd.iLayerType = PFD_MAIN_PLANE;
-    const int pixelFormat = ChoosePixelFormat(dc, &pfd);
-    if (!pixelFormat || !SetPixelFormat(dc, pixelFormat, &pfd))
+    const DWORD estilo = WS_OVERLAPPEDWINDOW;
+    RECT limites{0, 0, larguraJanela, alturaJanela};
+    AdjustWindowRect(&limites, estilo, FALSE);
+    janela = CreateWindowExW(0, classeJanela.lpszClassName, L"Quarto Interativo",
+                             estilo, CW_USEDEFAULT, CW_USEDEFAULT,
+                             limites.right - limites.left, limites.bottom - limites.top,
+                             nullptr, nullptr, instancia, nullptr);
+    if (!janela) throw std::runtime_error("Falha ao criar a janela.");
+    HDC contextoDispositivo = GetDC(janela);
+    PIXELFORMATDESCRIPTOR descritorFormatoPixel{};
+    descritorFormatoPixel.nSize = sizeof(descritorFormatoPixel);
+    descritorFormatoPixel.nVersion = 1;
+    descritorFormatoPixel.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    descritorFormatoPixel.iPixelType = PFD_TYPE_RGBA;
+    descritorFormatoPixel.cColorBits = 32;
+    descritorFormatoPixel.cDepthBits = 24;
+    descritorFormatoPixel.iLayerType = PFD_MAIN_PLANE;
+    const int formatoPixel = ChoosePixelFormat(contextoDispositivo, &descritorFormatoPixel);
+    if (!formatoPixel || !SetPixelFormat(contextoDispositivo, formatoPixel, &descritorFormatoPixel))
         throw std::runtime_error("Falha ao configurar o formato de pixels.");
 
-    HGLRC temporary = wglCreateContext(dc);
-    if (!temporary || !wglMakeCurrent(dc, temporary))
+    HGLRC contextoTemporario = wglCreateContext(contextoDispositivo);
+    if (!contextoTemporario || !wglMakeCurrent(contextoDispositivo, contextoTemporario))
         throw std::runtime_error("Falha ao criar o contexto OpenGL temporario.");
-    auto createContext = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(
+    auto criarContexto = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(
         glFunction("wglCreateContextAttribsARB"));
-    if (!createContext)
+    if (!criarContexto)
         throw std::runtime_error("OpenGL 3.3 nao disponivel neste computador.");
-    const int attributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+    const int atributos[] = {WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
                               WGL_CONTEXT_MINOR_VERSION_ARB, 3,
                               WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
                               0};
-    HGLRC context = createContext(dc, nullptr, attributes);
-    if (!context) throw std::runtime_error("Falha ao criar contexto OpenGL 3.3.");
+    HGLRC contexto = criarContexto(contextoDispositivo, nullptr, atributos);
+    if (!contexto) throw std::runtime_error("Falha ao criar contexto OpenGL 3.3.");
     wglMakeCurrent(nullptr, nullptr);
-    wglDeleteContext(temporary);
-    if (!wglMakeCurrent(dc, context))
+    wglDeleteContext(contextoTemporario);
+    if (!wglMakeCurrent(contextoDispositivo, contexto))
         throw std::runtime_error("Falha ao ativar contexto OpenGL 3.3.");
     loadOpenGL();
-    auto swapInterval = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>(
+    auto intervaloTroca = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>(
         glFunction("wglSwapIntervalEXT"));
-    if (swapInterval) swapInterval(1);
+    if (intervaloTroca) intervaloTroca(1);
 
-    Scene scene=makeScene();
-    Renderer renderer;
+    Scene cena=makeScene();
+    Renderer renderizador;
     glClearColor(0.43f, 0.67f, 0.87f, 1.0f);
-    std::size_t verificationFrame=0;
-    std::vector<VerificationFrame> verificationFrames;
-    if (verify) {
+    std::size_t quadroVerificacao=0;
+    std::vector<VerificationFrame> quadrosVerificacao;
+    if (verificar) {
         verifyWindowEvents();
-        verificationFrames=makeVerificationFrames();
+        quadrosVerificacao=makeVerificationFrames();
     }
 
-    Vec3 camera=initialCamera;
-    const Vec3 initialDirection=normalized(initialTarget-camera);
-    float yaw=std::atan2(initialDirection.z,initialDirection.x);
-    float pitch=std::asin(initialDirection.y);
-    if (!verify) {
-        ShowWindow(window, SW_SHOW);
-        UpdateWindow(window);
+    Vec3 camera=cameraInicial;
+    const Vec3 direcaoInicial=normalized(alvoInicial-camera);
+    float guinada=std::atan2(direcaoInicial.z,direcaoInicial.x);
+    float inclinacao=std::asin(direcaoInicial.y);
+    if (!verificar) {
+        ShowWindow(janela, SW_SHOW);
+        UpdateWindow(janela);
         captureCursor(true);
         centerCursor();
     }
-    auto previous = std::chrono::steady_clock::now();
+    auto anterior = std::chrono::steady_clock::now();
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << '\n';
     std::cout << "W/A/S/D: mover | mouse: olhar | E: interagir | 1/2/3: horario | Esc: sair\n";
 
-    while (running) {
-        MSG message{};
-        while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
-            if (message.message == WM_QUIT) running = false;
-            TranslateMessage(&message);
-            DispatchMessageW(&message);
+    while (executando) {
+        MSG mensagem{};
+        while (PeekMessageW(&mensagem, nullptr, 0, 0, PM_REMOVE)) {
+            if (mensagem.message == WM_QUIT) executando = false;
+            TranslateMessage(&mensagem);
+            DispatchMessageW(&mensagem);
         }
-        if (!running) break;
-        const auto now = std::chrono::steady_clock::now();
-        const float dt = std::min(std::chrono::duration<float>(now - previous).count(), 0.05f);
-        previous = now;
+        if (!executando) break;
+        const auto agora = std::chrono::steady_clock::now();
+        const float dt = std::min(std::chrono::duration<float>(agora - anterior).count(), 0.05f);
+        anterior = agora;
 
-        if (!verify && focused && cursorCaptured) {
-            if (resetMouse) {
+        if (!verificar && comFoco && cursorCapturado) {
+            if (redefinirMouse) {
                 centerCursor();
-                resetMouse = false;
+                redefinirMouse = false;
             } else {
-                RECT client{};
-                GetClientRect(window, &client);
-                POINT center{(client.right - client.left) / 2,
-                             (client.bottom - client.top) / 2};
-                ClientToScreen(window, &center);
+                RECT cliente{};
+                GetClientRect(janela, &cliente);
+                POINT centro{(cliente.right - cliente.left) / 2,
+                             (cliente.bottom - cliente.top) / 2};
+                ClientToScreen(janela, &centro);
                 POINT mouse{};
                 GetCursorPos(&mouse);
-                yaw += static_cast<float>(mouse.x - center.x) * 0.0025f;
-                pitch = std::clamp(pitch - static_cast<float>(mouse.y - center.y) * 0.0025f,
+                guinada += static_cast<float>(mouse.x - centro.x) * 0.0025f;
+                inclinacao = std::clamp(inclinacao - static_cast<float>(mouse.y - centro.y) * 0.0025f,
                                    -1.48f, 1.48f);
-                SetCursorPos(center.x, center.y);
+                SetCursorPos(centro.x, centro.y);
             }
 
-            const Vec3 forward{std::cos(yaw), 0, std::sin(yaw)};
-            const Vec3 right{-forward.z, 0, forward.x};
-            Vec3 direction{0, 0, 0};
-            auto held = [](int key) { return (GetAsyncKeyState(key) & 0x8000) != 0; };
-            if (held('W')) direction = direction + forward;
-            if (held('S')) direction = direction - forward;
-            if (held('D')) direction = direction + right;
-            if (held('A')) direction = direction - right;
-            moveCamera(scene,camera,direction,dt);
-            Vec3 lookDirection{std::cos(yaw)*std::cos(pitch),std::sin(pitch),std::sin(yaw)*std::cos(pitch)};
-            for (char key : commands) applyCommand(scene,key,camera,lookDirection);
-            updateScene(scene,dt,camera);
+            const Vec3 frente{std::cos(guinada), 0, std::sin(guinada)};
+            const Vec3 direita{-frente.z, 0, frente.x};
+            Vec3 direcao{0, 0, 0};
+            auto pressionada = [](int tecla) { return (GetAsyncKeyState(tecla) & 0x8000) != 0; };
+            if (pressionada('W')) direcao = direcao + frente;
+            if (pressionada('S')) direcao = direcao - frente;
+            if (pressionada('D')) direcao = direcao + direita;
+            if (pressionada('A')) direcao = direcao - direita;
+            moveCamera(cena,camera,direcao,dt);
+            Vec3 direcaoOlhar{std::cos(guinada)*std::cos(inclinacao),std::sin(inclinacao),std::sin(guinada)*std::cos(inclinacao)};
+            for (char tecla : comandos) applyCommand(cena,tecla,camera,direcaoOlhar);
+            updateScene(cena,dt,camera);
         }
-        commands.clear();
+        comandos.clear();
 
-        if (verify) {
-            const auto& shot=verificationFrames[verificationFrame];
-            scene=shot.scene;
-            camera=shot.camera;
-            Vec3 direction=normalized(shot.target-camera);
-            yaw=std::atan2(direction.z,direction.x);
-            pitch=std::asin(direction.y);
+        if (verificar) {
+            const auto& captura=quadrosVerificacao[quadroVerificacao];
+            cena=captura.cena;
+            camera=captura.camera;
+            Vec3 direcao=normalized(captura.alvo-camera);
+            guinada=std::atan2(direcao.z,direcao.x);
+            inclinacao=std::asin(direcao.y);
         }
-        if (windowWidth > 0 && windowHeight > 0) {
-            glViewport(0, 0, windowWidth, windowHeight);
-            const Lighting lights=lightingFor(scene);
-            glClearColor(lights.sky.x,lights.sky.y,lights.sky.z,1);
+        if (larguraJanela > 0 && alturaJanela > 0) {
+            glViewport(0, 0, larguraJanela, alturaJanela);
+            const Lighting luzes=lightingFor(cena);
+            glClearColor(luzes.ceu.x,luzes.ceu.y,luzes.ceu.z,1);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            const Mat4 projection = perspective(70.0f * pi / 180.0f,
-                                                float(windowWidth) / float(windowHeight),
+            const Mat4 projecao = perspective(70.0f * pi / 180.0f,
+                                                float(larguraJanela) / float(alturaJanela),
                                                 0.05f, 50.0f);
-            const Vec3 lookDirection{std::cos(yaw) * std::cos(pitch), std::sin(pitch),
-                                     std::sin(yaw) * std::cos(pitch)};
-            const Mat4 view = lookAt(camera, camera + lookDirection);
-            renderer.draw(scene,camera,projection,view,windowWidth,windowHeight);
-            renderer.drawHud(windowWidth,windowHeight,scene,aimedInteraction(scene,camera,lookDirection));
-            if (verify) {
-                saveFrame(verificationFrames[verificationFrame].file.c_str(),windowWidth,windowHeight);
+            const Vec3 direcaoOlhar{std::cos(guinada) * std::cos(inclinacao), std::sin(inclinacao),
+                                     std::sin(guinada) * std::cos(inclinacao)};
+            const Mat4 visao = lookAt(camera, camera + direcaoOlhar);
+            renderizador.draw(cena,camera,projecao,visao,larguraJanela,alturaJanela);
+            renderizador.drawHud(larguraJanela,alturaJanela,cena,aimedInteraction(cena,camera,direcaoOlhar));
+            if (verificar) {
+                saveFrame(quadrosVerificacao[quadroVerificacao].arquivo.c_str(),larguraJanela,alturaJanela);
                 if (glGetError()!=GL_NO_ERROR) throw std::runtime_error("Erro OpenGL durante verificacao.");
-                std::cout << "Captura: " << verificationFrames[verificationFrame].file
-                          << " | porta=" << scene.doorAngle << " janela=" << scene.windowAngle
-                          << " bola=" << scene.ballPosition.x << "," << scene.ballPosition.z
-                          << " giro=" << scene.ballRotation << " | " << statusText(scene) << std::endl;
-                ++verificationFrame;
-                if (verificationFrame==verificationFrames.size()) running=false;
+                std::cout << "Captura: " << quadrosVerificacao[quadroVerificacao].arquivo
+                          << " | porta=" << cena.anguloPorta << " janela=" << cena.anguloJanela
+                          << " bola=" << cena.posicaoBola.x << "," << cena.posicaoBola.z
+                          << " giro=" << cena.rotacaoBola << " | " << statusText(cena) << std::endl;
+                ++quadroVerificacao;
+                if (quadroVerificacao==quadrosVerificacao.size()) executando=false;
             }
-            SwapBuffers(dc);
+            SwapBuffers(contextoDispositivo);
         } else {
             Sleep(16);
         }
     }
 
     captureCursor(false);
-    renderer.release();
+    renderizador.release();
     wglMakeCurrent(nullptr, nullptr);
-    wglDeleteContext(context);
-    ReleaseDC(window, dc);
-    DestroyWindow(window);
+    wglDeleteContext(contexto);
+    ReleaseDC(janela, contextoDispositivo);
+    DestroyWindow(janela);
     return 0;
 }
 

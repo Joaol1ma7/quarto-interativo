@@ -1,7 +1,7 @@
 #pragma once
 #include "math.hpp"
 
-// Geometria e shader compartilham a mesma referencia da luminaria.
+// Geometria e sombreador compartilham a mesma referencia da luminaria.
 constexpr Vec3 lampAnchor{4.25f,0.f,2.30f};
 constexpr float lampShadeY=2.35f, lampShadeHeight=.24f;
 constexpr float lampBulbY=2.20f, lampBulbHeight=.16f;

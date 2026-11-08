@@ -11,25 +11,25 @@
 
 namespace {
 template <typename T> struct ComObject {
-    T* value = nullptr;
-    ~ComObject() { if (value) value->Release(); }
-    T** out() { return &value; }
-    T* operator->() const { return value; }
+    T* valor = nullptr;
+    ~ComObject() { if (valor) valor->Release(); }
+    T** out() { return &valor; }
+    T* operator->() const { return valor; }
 };
 
 struct ComApartment {
-    bool initialized = false;
+    bool inicializado = false;
     ComApartment() {
-        const HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        if (SUCCEEDED(result)) initialized = true;
-        else if (result != RPC_E_CHANGED_MODE)
+        const HRESULT resultado = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (SUCCEEDED(resultado)) inicializado = true;
+        else if (resultado != RPC_E_CHANGED_MODE)
             throw std::runtime_error("Falha ao iniciar o carregamento da imagem do quadro.");
     }
-    ~ComApartment() { if (initialized) CoUninitialize(); }
+    ~ComApartment() { if (inicializado) CoUninitialize(); }
 };
 
-void require(HRESULT result, const char* message) {
-    if (FAILED(result)) throw std::runtime_error(message);
+void require(HRESULT resultado, const char* mensagem) {
+    if (FAILED(resultado)) throw std::runtime_error(mensagem);
 }
 
 std::wstring artworkPath() {
@@ -37,44 +37,44 @@ std::wstring artworkPath() {
     const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
     if (length == 0 || length >= buffer.size())
         throw std::runtime_error("Nao foi possivel localizar o executavel.");
-    std::wstring path(buffer.data(), length);
-    const auto separator = path.find_last_of(L"\\/");
-    return path.substr(0, separator + 1) + L"assets\\quadro.jpg";
+    std::wstring caminho(buffer.data(), length);
+    const auto separador = caminho.find_last_of(L"\\/");
+    return caminho.substr(0, separador + 1) + L"assets\\quadro.jpg";
 }
 }
 
 ImageData loadArtworkImage() {
-    ComApartment apartment;
-    ComObject<IWICImagingFactory> factory;
+    ComApartment apartamento;
+    ComObject<IWICImagingFactory> fabrica;
     require(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
                              IID_IWICImagingFactory,
-                             reinterpret_cast<void**>(factory.out())),
+                             reinterpret_cast<void**>(fabrica.out())),
             "Falha ao iniciar o decodificador de imagem.");
-    ComObject<IWICBitmapDecoder> decoder;
-    const std::wstring path = artworkPath();
-    require(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
-                                                WICDecodeMetadataCacheOnLoad, decoder.out()),
+    ComObject<IWICBitmapDecoder> decodificador;
+    const std::wstring caminho = artworkPath();
+    require(fabrica->CreateDecoderFromFilename(caminho.c_str(), nullptr, GENERIC_READ,
+                                                WICDecodeMetadataCacheOnLoad, decodificador.out()),
             "Nao foi possivel abrir assets/quadro.jpg ao lado do executavel.");
-    ComObject<IWICBitmapFrameDecode> frame;
-    require(decoder->GetFrame(0, frame.out()), "Falha ao ler a fotografia do quadro.");
-    ComObject<IWICFormatConverter> converter;
-    require(factory->CreateFormatConverter(converter.out()), "Falha ao converter a fotografia.");
-    require(converter->Initialize(frame.value, GUID_WICPixelFormat24bppRGB,
+    ComObject<IWICBitmapFrameDecode> quadro;
+    require(decodificador->GetFrame(0, quadro.out()), "Falha ao ler a fotografia do quadro.");
+    ComObject<IWICFormatConverter> conversor;
+    require(fabrica->CreateFormatConverter(conversor.out()), "Falha ao conversor a fotografia.");
+    require(conversor->Initialize(quadro.valor, GUID_WICPixelFormat24bppRGB,
                                   WICBitmapDitherTypeNone, nullptr, 0.0,
                                   WICBitmapPaletteTypeCustom),
             "Formato da fotografia do quadro nao suportado.");
-    UINT width = 0, height = 0;
-    require(converter->GetSize(&width, &height), "Falha ao obter tamanho da fotografia.");
-    if (width == 0 || height == 0 || width > 16384 || height > 16384)
+    UINT largura = 0, altura = 0;
+    require(conversor->GetSize(&largura, &altura), "Falha ao obter tamanho da fotografia.");
+    if (largura == 0 || altura == 0 || largura > 16384 || altura > 16384)
         throw std::runtime_error("Tamanho invalido da fotografia do quadro.");
-    const UINT stride = width * 3;
-    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(stride) * height);
-    require(converter->CopyPixels(nullptr, stride, static_cast<UINT>(pixels.size()), pixels.data()),
+    const UINT passoLinha = largura * 3;
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(passoLinha) * altura);
+    require(conversor->CopyPixels(nullptr, passoLinha, static_cast<UINT>(pixels.size()), pixels.data()),
             "Falha ao copiar os pixels da fotografia.");
     // WIC entrega a primeira linha no topo; a coordenada V=0 do OpenGL fica embaixo.
-    for (UINT y = 0; y < height / 2; ++y)
-        std::swap_ranges(pixels.begin() + static_cast<std::size_t>(y) * stride,
-                         pixels.begin() + static_cast<std::size_t>(y + 1) * stride,
-                         pixels.begin() + static_cast<std::size_t>(height - 1 - y) * stride);
-    return {static_cast<int>(width), static_cast<int>(height), std::move(pixels)};
+    for (UINT y = 0; y < altura / 2; ++y)
+        std::swap_ranges(pixels.begin() + static_cast<std::size_t>(y) * passoLinha,
+                         pixels.begin() + static_cast<std::size_t>(y + 1) * passoLinha,
+                         pixels.begin() + static_cast<std::size_t>(altura - 1 - y) * passoLinha);
+    return {static_cast<int>(largura), static_cast<int>(altura), std::move(pixels)};
 }

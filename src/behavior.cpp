@@ -3,47 +3,47 @@
 #include <limits>
 
 namespace {
-bool overlaps(const Collider& c, float x, float z, float radius) {
-    const float dx=x-c.center.x, dz=z-c.center.y;
-    const float lx=std::cos(c.yaw)*dx-std::sin(c.yaw)*dz;
-    const float lz=std::sin(c.yaw)*dx+std::cos(c.yaw)*dz;
-    const float ex=lx-std::clamp(lx,-c.halfSize.x,c.halfSize.x);
-    const float ez=lz-std::clamp(lz,-c.halfSize.y,c.halfSize.y);
-    return ex*ex+ez*ez < radius*radius;
+bool overlaps(const Collider& c, float x, float z, float raio) {
+    const float dx=x-c.centro.x, dz=z-c.centro.y;
+    const float lx=std::cos(c.guinada)*dx-std::sin(c.guinada)*dz;
+    const float lz=std::sin(c.guinada)*dx+std::cos(c.guinada)*dz;
+    const float ex=lx-std::clamp(lx,-c.meiaExtensao.x,c.meiaExtensao.x);
+    const float ez=lz-std::clamp(lz,-c.meiaExtensao.y,c.meiaExtensao.y);
+    return ex*ex+ez*ez < raio*raio;
 }
 
 Mat4 inverseAffine(const Mat4& m) {
-    const auto& v=m.values;
+    const auto& v=m.valores;
     Vec3 a{v[0],v[1],v[2]}, b{v[4],v[5],v[6]}, c{v[8],v[9],v[10]};
     const float det=dot(a,cross(b,c));
     Vec3 r0=cross(b,c)*(1/det), r1=cross(c,a)*(1/det), r2=cross(a,b)*(1/det);
     Vec3 t{v[12],v[13],v[14]};
-    Mat4 result;
-    result.values={r0.x,r1.x,r2.x,0,r0.y,r1.y,r2.y,0,r0.z,r1.z,r2.z,0,
+    Mat4 resultado;
+    resultado.valores={r0.x,r1.x,r2.x,0,r0.y,r1.y,r2.y,0,r0.z,r1.z,r2.z,0,
                    -dot(r0,t),-dot(r1,t),-dot(r2,t),1};
-    return result;
+    return resultado;
 }
 
 float rayBox(Vec3 o, Vec3 d) {
-    float near=0, far=std::numeric_limits<float>::max();
-    const float origins[]={o.x,o.y,o.z}, dirs[]={d.x,d.y,d.z};
+    float proximo=0, distante=std::numeric_limits<float>::max();
+    const float origens[]={o.x,o.y,o.z}, direcoes[]={d.x,d.y,d.z};
     for (int i=0;i<3;++i) {
-        if (std::abs(dirs[i])<1e-7f) {
-            if (origins[i]<-.5f || origins[i]>.5f) return -1;
+        if (std::abs(direcoes[i])<1e-7f) {
+            if (origens[i]<-.5f || origens[i]>.5f) return -1;
         } else {
-            float a=(-.5f-origins[i])/dirs[i], b=(.5f-origins[i])/dirs[i];
+            float a=(-.5f-origens[i])/direcoes[i], b=(.5f-origens[i])/direcoes[i];
             if (a>b) std::swap(a,b);
-            near=std::max(near,a); far=std::min(far,b);
-            if (near>far) return -1;
+            proximo=std::max(proximo,a); distante=std::min(distante,b);
+            if (proximo>distante) return -1;
         }
     }
-    return far>0 ? near : -1;
+    return distante>0 ? proximo : -1;
 }
 
-float rayTriangles(const MeshData& mesh, Vec3 o, Vec3 d) {
-    float nearest=std::numeric_limits<float>::max();
-    for (std::size_t i=0;i<mesh.size();i+=3) {
-        Vec3 a=mesh[i].position, e1=mesh[i+1].position-a, e2=mesh[i+2].position-a;
+float rayTriangles(const MeshData& malha, Vec3 o, Vec3 d) {
+    float maisProximo=std::numeric_limits<float>::max();
+    for (std::size_t i=0;i<malha.size();i+=3) {
+        Vec3 a=malha[i].posicao, e1=malha[i+1].posicao-a, e2=malha[i+2].posicao-a;
         Vec3 h=cross(d,e2);
         float det=dot(e1,h);
         if (std::abs(det)<1e-8f) continue;
@@ -54,192 +54,192 @@ float rayTriangles(const MeshData& mesh, Vec3 o, Vec3 d) {
         float v=dot(d,q)/det;
         if (v<0 || u+v>1) continue;
         float t=dot(e2,q)/det;
-        if (t>0 && t<nearest) nearest=t;
+        if (t>0 && t<maisProximo) maisProximo=t;
     }
-    return nearest;
+    return maisProximo;
 }
 
-Mat4 roll(Vec3 displacement) {
-    const float distance=std::sqrt(dot(displacement,displacement));
-    Vec3 a=normalized(cross({0,1,0},displacement));
-    float c=std::cos(distance/ballRadius), s=std::sin(distance/ballRadius), k=1-c;
+Mat4 roll(Vec3 deslocamento) {
+    const float distancia=std::sqrt(dot(deslocamento,deslocamento));
+    Vec3 a=normalized(cross({0,1,0},deslocamento));
+    float c=std::cos(distancia/raioBola), s=std::sin(distancia/raioBola), k=1-c;
     Mat4 m=identity();
-    m.values[0]=c+a.x*a.x*k; m.values[4]=a.x*a.y*k-a.z*s; m.values[8]=a.x*a.z*k+a.y*s;
-    m.values[1]=a.y*a.x*k+a.z*s; m.values[5]=c+a.y*a.y*k; m.values[9]=a.y*a.z*k-a.x*s;
-    m.values[2]=a.z*a.x*k-a.y*s; m.values[6]=a.z*a.y*k+a.x*s; m.values[10]=c+a.z*a.z*k;
+    m.valores[0]=c+a.x*a.x*k; m.valores[4]=a.x*a.y*k-a.z*s; m.valores[8]=a.x*a.z*k+a.y*s;
+    m.valores[1]=a.y*a.x*k+a.z*s; m.valores[5]=c+a.y*a.y*k; m.valores[9]=a.y*a.z*k-a.x*s;
+    m.valores[2]=a.z*a.x*k-a.y*s; m.valores[6]=a.z*a.y*k+a.x*s; m.valores[10]=c+a.z*a.z*k;
     return m;
 }
 
-float approach(float value, float target, float step) {
-    return value+std::clamp(target-value,-step,step);
+float approach(float valor, float alvo, float passo) {
+    return valor+std::clamp(alvo-valor,-passo,passo);
 }
 } // namespace
 
-Collider doorCollider(float angle) {
-    return {{8.46f+.475f*std::sin(angle),3.60f+.475f*std::cos(angle)}, {.095f,.48f},angle};
+Collider doorCollider(float angulo) {
+    return {{8.46f+.475f*std::sin(angulo),3.60f+.475f*std::cos(angulo)}, {.095f,.48f},angulo};
 }
-Collider windowCollider(float angle) {
-    return {{.04f+.635f*std::sin(angle),1.85f+.635f*std::cos(angle)}, {.065f,.635f},angle};
+Collider windowCollider(float angulo) {
+    return {{.04f+.635f*std::sin(angulo),1.85f+.635f*std::cos(angulo)}, {.065f,.635f},angulo};
 }
 
-bool clearOfObstacles(const Scene& scene, float x, float z, float radius, bool includeWindow) {
-    if (x<radius || x>roomWidth-radius || z<radius || z>roomDepth-radius) return false;
-    if (x<recessWidth+radius && z>recessStart-radius) return false;
-    for (const auto& c : scene.colliders) if (overlaps(c,x,z,radius)) return false;
-    if (overlaps(doorCollider(scene.doorAngle),x,z,radius)) return false;
-    if (includeWindow && overlaps(windowCollider(scene.windowAngle),x,z,radius)) return false;
+bool clearOfObstacles(const Scene& cena, float x, float z, float raio, bool incluirJanela) {
+    if (x<raio || x>larguraQuarto-raio || z<raio || z>profundidadeQuarto-raio) return false;
+    if (x<larguraRecuo+raio && z>inicioRecuo-raio) return false;
+    for (const auto& c : cena.colisores) if (overlaps(c,x,z,raio)) return false;
+    if (overlaps(doorCollider(cena.anguloPorta),x,z,raio)) return false;
+    if (incluirJanela && overlaps(windowCollider(cena.anguloJanela),x,z,raio)) return false;
     return true;
 }
 
-bool canWalk(const Scene& scene, float x, float z) {
-    if (!clearOfObstacles(scene,x,z,cameraRadius,true)) return false;
-    float dx=x-scene.ballPosition.x, dz=z-scene.ballPosition.z;
-    return dx*dx+dz*dz >= (ballRadius+cameraRadius)*(ballRadius+cameraRadius);
+bool canWalk(const Scene& cena, float x, float z) {
+    if (!clearOfObstacles(cena,x,z,raioCamera,true)) return false;
+    float dx=x-cena.posicaoBola.x, dz=z-cena.posicaoBola.z;
+    return dx*dx+dz*dz >= (raioBola+raioCamera)*(raioBola+raioCamera);
 }
 
-void moveCamera(const Scene& scene, Vec3& camera, Vec3 direction, float dt) {
-    direction.y=0;
-    if (dot(direction,direction)<1e-8f || dt<=0) return;
-    Vec3 delta=normalized(direction)*(2.8f*std::min(dt,.05f));
-    int steps=std::max(1,int(std::ceil(std::sqrt(dot(delta,delta))/.04f)));
-    delta=delta*(1.f/steps);
-    for (int i=0;i<steps;++i) {
-        if (canWalk(scene,camera.x+delta.x,camera.z)) camera.x+=delta.x;
-        if (canWalk(scene,camera.x,camera.z+delta.z)) camera.z+=delta.z;
+void moveCamera(const Scene& cena, Vec3& camera, Vec3 direcao, float dt) {
+    direcao.y=0;
+    if (dot(direcao,direcao)<1e-8f || dt<=0) return;
+    Vec3 deslocamento=normalized(direcao)*(2.8f*std::min(dt,.05f));
+    int passos=std::max(1,int(std::ceil(std::sqrt(dot(deslocamento,deslocamento))/.04f)));
+    deslocamento=deslocamento*(1.f/passos);
+    for (int i=0;i<passos;++i) {
+        if (canWalk(cena,camera.x+deslocamento.x,camera.z)) camera.x+=deslocamento.x;
+        if (canWalk(cena,camera.x,camera.z+deslocamento.z)) camera.z+=deslocamento.z;
     }
 }
 
-Interaction aimedInteraction(const Scene& scene, Vec3 origin, Vec3 direction) {
-    if (dot(direction,direction)<1e-8f) return Interaction::None;
-    direction=normalized(direction);
-    static const std::array<MeshData,static_cast<int>(MeshKind::Count)> meshes=[] {
-        std::array<MeshData,static_cast<int>(MeshKind::Count)> result;
-        for (int i=0;i<int(MeshKind::Count);++i) result[i]=makeMesh(static_cast<MeshKind>(i));
-        return result;
+Interaction aimedInteraction(const Scene& cena, Vec3 origem, Vec3 direcao) {
+    if (dot(direcao,direcao)<1e-8f) return Interaction::None;
+    direcao=normalized(direcao);
+    static const std::array<MeshData,static_cast<int>(MeshKind::Count)> malhas=[] {
+        std::array<MeshData,static_cast<int>(MeshKind::Count)> resultado;
+        for (int i=0;i<int(MeshKind::Count);++i) resultado[i]=makeMesh(static_cast<MeshKind>(i));
+        return resultado;
     }();
-    float nearest=interactionReach;
-    Interaction selected=Interaction::None;
-    for (const auto& part : scene.parts) {
-        if (part.outdoor || !visiblePart(scene,part)) continue;
-        Mat4 inverse=inverseAffine(partModel(scene,part));
-        Vec3 o=transformPoint(inverse,origin);
-        Vec3 d=transformPoint(inverse,origin+direction)-o;
+    float maisProximo=alcanceInteracao;
+    Interaction selecionada=Interaction::None;
+    for (const auto& parte : cena.partes) {
+        if (parte.externo || !visiblePart(cena,parte)) continue;
+        Mat4 inversa=inverseAffine(partModel(cena,parte));
+        Vec3 o=transformPoint(inversa,origem);
+        Vec3 d=transformPoint(inversa,origem+direcao)-o;
         float t=-1;
-        if (part.mesh==MeshKind::Cube) t=rayBox(o,d);
-        else if (part.mesh==MeshKind::Sphere) {
-            float a=dot(d,d), b=dot(o,d), c=dot(o,o)-.25f, discriminant=b*b-a*c;
-            if (discriminant>=0) {
-                t=(-b-std::sqrt(discriminant))/a;
-                if (t<0) t=(-b+std::sqrt(discriminant))/a;
+        if (parte.malha==MeshKind::Cube) t=rayBox(o,d);
+        else if (parte.malha==MeshKind::Sphere) {
+            float a=dot(d,d), b=dot(o,d), c=dot(o,o)-.25f, discriminante=b*b-a*c;
+            if (discriminante>=0) {
+                t=(-b-std::sqrt(discriminante))/a;
+                if (t<0) t=(-b+std::sqrt(discriminante))/a;
             }
-        } else if (part.mesh==MeshKind::Shell || part.mesh==MeshKind::Floor || rayBox(o,d)>=0) {
-            t=rayTriangles(meshes[static_cast<int>(part.mesh)],o,d);
+        } else if (parte.malha==MeshKind::Shell || parte.malha==MeshKind::Floor || rayBox(o,d)>=0) {
+            t=rayTriangles(malhas[static_cast<int>(parte.malha)],o,d);
         }
-        if (t<0 || t>=nearest) continue;
-        nearest=t;
-        selected=Interaction::None;
-        if (part.object=="porta") selected=Interaction::Door;
-        if (part.object=="janela") selected=Interaction::Window;
-        if (part.object=="luminaria" || part.object=="interruptor") selected=Interaction::Lamp;
+        if (t<0 || t>=maisProximo) continue;
+        maisProximo=t;
+        selecionada=Interaction::None;
+        if (parte.objeto=="porta") selecionada=Interaction::Door;
+        if (parte.objeto=="janela") selecionada=Interaction::Window;
+        if (parte.objeto=="luminaria" || parte.objeto=="interruptor") selecionada=Interaction::Lamp;
     }
-    return selected;
+    return selecionada;
 }
 
-bool applyCommand(Scene& scene, char key, Vec3 camera, Vec3 lookDirection) {
-    if (key>='1' && key<='3') {
-        scene.period=static_cast<DayPeriod>(key-'1');
+bool applyCommand(Scene& cena, char tecla, Vec3 camera, Vec3 direcaoOlhar) {
+    if (tecla>='1' && tecla<='3') {
+        cena.periodo=static_cast<DayPeriod>(tecla-'1');
         return true;
     }
-    if (key!='E') return false;
-    switch (aimedInteraction(scene,camera,lookDirection)) {
-    case Interaction::Door: scene.doorOpen=!scene.doorOpen; return true;
-    case Interaction::Window: scene.windowOpen=!scene.windowOpen; return true;
-    case Interaction::Lamp: scene.lampOn=!scene.lampOn; return true;
+    if (tecla!='E') return false;
+    switch (aimedInteraction(cena,camera,direcaoOlhar)) {
+    case Interaction::Door: cena.portaAberta=!cena.portaAberta; return true;
+    case Interaction::Window: cena.janelaAberta=!cena.janelaAberta; return true;
+    case Interaction::Lamp: cena.luminariaLigada=!cena.luminariaLigada; return true;
     default: return false;
     }
 }
 
-void updateScene(Scene& scene, float dt, Vec3 camera) {
+void updateScene(Scene& cena, float dt, Vec3 camera) {
     if (dt<=0) return;
     dt=std::min(dt,.05f);
-    Vec3 away=scene.ballPosition-camera; away.y=0;
-    float distance=std::sqrt(dot(away,away));
-    if (!scene.ballNear && distance<.80f) {
-        scene.ballVelocity=(distance>.001f ? away*(1/distance) : Vec3{1,0,0})*1.65f;
-        scene.ballNear=true;
-    } else if (distance>1.05f) scene.ballNear=false;
+    Vec3 afastamento=cena.posicaoBola-camera; afastamento.y=0;
+    float distancia=std::sqrt(dot(afastamento,afastamento));
+    if (!cena.bolaProxima && distancia<.80f) {
+        cena.velocidadeBola=(distancia>.001f ? afastamento*(1/distancia) : Vec3{1,0,0})*1.65f;
+        cena.bolaProxima=true;
+    } else if (distancia>1.05f) cena.bolaProxima=false;
 
-    const int steps=std::max(1,int(std::ceil(dt*120)));
-    const float step=dt/steps;
-    scene.doorBlocked=scene.windowBlocked=false;
-    for (int i=0;i<steps;++i) {
-        float nextDoor=approach(scene.doorAngle,scene.doorOpen?doorOpenAngle:0,1.35f*step);
-        Collider door=doorCollider(nextDoor);
-        if (overlaps(door,camera.x,camera.z,cameraRadius+.015f) ||
-            overlaps(door,scene.ballPosition.x,scene.ballPosition.z,ballRadius+.01f))
-            scene.doorBlocked=nextDoor!=scene.doorAngle;
-        else scene.doorAngle=nextDoor;
-        float nextWindow=approach(scene.windowAngle,scene.windowOpen?windowOpenAngle:0,1.15f*step);
-        if (overlaps(windowCollider(nextWindow),camera.x,camera.z,cameraRadius+.015f))
-            scene.windowBlocked=nextWindow!=scene.windowAngle;
-        else scene.windowAngle=nextWindow;
+    const int passos=std::max(1,int(std::ceil(dt*120)));
+    const float passo=dt/passos;
+    cena.portaBloqueada=cena.janelaBloqueada=false;
+    for (int i=0;i<passos;++i) {
+        float proximaPorta=approach(cena.anguloPorta,cena.portaAberta?anguloPortaAberta:0,1.35f*passo);
+        Collider porta=doorCollider(proximaPorta);
+        if (overlaps(porta,camera.x,camera.z,raioCamera+.015f) ||
+            overlaps(porta,cena.posicaoBola.x,cena.posicaoBola.z,raioBola+.01f))
+            cena.portaBloqueada=proximaPorta!=cena.anguloPorta;
+        else cena.anguloPorta=proximaPorta;
+        float proximaJanela=approach(cena.anguloJanela,cena.janelaAberta?anguloJanelaAberta:0,1.15f*passo);
+        if (overlaps(windowCollider(proximaJanela),camera.x,camera.z,raioCamera+.015f))
+            cena.janelaBloqueada=proximaJanela!=cena.anguloJanela;
+        else cena.anguloJanela=proximaJanela;
 
-        Vec3 before=scene.ballPosition;
-        auto freeBall=[&](float x,float z) {
+        Vec3 antes=cena.posicaoBola;
+        auto bolaLivre=[&](float x,float z) {
             float dx=x-camera.x, dz=z-camera.z;
-            return clearOfObstacles(scene,x,z,ballRadius,false) &&
-                   dx*dx+dz*dz >= (cameraRadius+ballRadius)*(cameraRadius+ballRadius);
+            return clearOfObstacles(cena,x,z,raioBola,false) &&
+                   dx*dx+dz*dz >= (raioCamera+raioBola)*(raioCamera+raioBola);
         };
-        float x=scene.ballPosition.x+scene.ballVelocity.x*step;
-        if (freeBall(x,scene.ballPosition.z)) scene.ballPosition.x=x;
-        else scene.ballVelocity.x*=-.45f;
-        float z=scene.ballPosition.z+scene.ballVelocity.z*step;
-        if (freeBall(scene.ballPosition.x,z)) scene.ballPosition.z=z;
-        else scene.ballVelocity.z*=-.45f;
-        Vec3 traveled=scene.ballPosition-before;
-        const float length=std::sqrt(dot(traveled,traveled));
+        float x=cena.posicaoBola.x+cena.velocidadeBola.x*passo;
+        if (bolaLivre(x,cena.posicaoBola.z)) cena.posicaoBola.x=x;
+        else cena.velocidadeBola.x*=-.45f;
+        float z=cena.posicaoBola.z+cena.velocidadeBola.z*passo;
+        if (bolaLivre(cena.posicaoBola.x,z)) cena.posicaoBola.z=z;
+        else cena.velocidadeBola.z*=-.45f;
+        Vec3 percorrido=cena.posicaoBola-antes;
+        const float length=std::sqrt(dot(percorrido,percorrido));
         if (length>1e-7f) {
-            scene.ballOrientation=roll(traveled)*scene.ballOrientation;
-            scene.ballRotation+=length/ballRadius;
+            cena.orientacaoBola=roll(percorrido)*cena.orientacaoBola;
+            cena.rotacaoBola+=length/raioBola;
         }
-        scene.ballVelocity=scene.ballVelocity*std::exp(-1.45f*step);
-        if (dot(scene.ballVelocity,scene.ballVelocity)<.0004f) scene.ballVelocity={0,0,0};
+        cena.velocidadeBola=cena.velocidadeBola*std::exp(-1.45f*passo);
+        if (dot(cena.velocidadeBola,cena.velocidadeBola)<.0004f) cena.velocidadeBola={0,0,0};
     }
 }
 
-Lighting lightingFor(const Scene& scene) {
+Lighting lightingFor(const Scene& cena) {
     Lighting l;
-    const float opening=std::clamp(scene.windowAngle/windowOpenAngle,0.f,1.f);
-    const float transmission=.52f+.48f*opening;
-    const float ambientTransmission=.82f+.18f*opening;
-    if (scene.period==DayPeriod::Morning) {
-        l.sky={.48f,.73f,.94f}; l.ambient=Vec3{.58f,.60f,.61f}*ambientTransmission;
-        l.natural=Vec3{1.05f,1.02f,.94f}*transmission;
-    } else if (scene.period==DayPeriod::Afternoon) {
-        l.sky={.65f,.39f,.23f}; l.ambient=Vec3{.42f,.32f,.25f}*ambientTransmission;
-        l.natural=Vec3{.78f,.44f,.22f}*transmission;
+    const float abertura=std::clamp(cena.anguloJanela/anguloJanelaAberta,0.f,1.f);
+    const float transmissao=.52f+.48f*abertura;
+    const float transmissaoAmbiente=.82f+.18f*abertura;
+    if (cena.periodo==DayPeriod::Morning) {
+        l.ceu={.48f,.73f,.94f}; l.ambiente=Vec3{.58f,.60f,.61f}*transmissaoAmbiente;
+        l.natural=Vec3{1.05f,1.02f,.94f}*transmissao;
+    } else if (cena.periodo==DayPeriod::Afternoon) {
+        l.ceu={.65f,.39f,.23f}; l.ambiente=Vec3{.42f,.32f,.25f}*transmissaoAmbiente;
+        l.natural=Vec3{.78f,.44f,.22f}*transmissao;
     } else {
-        l.sky={.012f,.023f,.055f}; l.ambient=Vec3{.045f,.060f,.095f}*ambientTransmission;
-        l.natural=Vec3{.035f,.055f,.10f}*transmission;
+        l.ceu={.012f,.023f,.055f}; l.ambiente=Vec3{.045f,.060f,.095f}*transmissaoAmbiente;
+        l.natural=Vec3{.035f,.055f,.10f}*transmissao;
     }
-    l.artificial=scene.lampOn ? Vec3{1.12f,.99f,.76f} : Vec3{0,0,0};
+    l.artificial=cena.luminariaLigada ? Vec3{1.12f,.99f,.76f} : Vec3{0,0,0};
     return l;
 }
 
-std::string interactionPrompt(const Scene& scene, Interaction target) {
-    if (target==Interaction::Door) {
-        if (scene.doorBlocked) return "E - INVERTER PORTA / AFASTE-SE";
-        return scene.doorOpen?"E - FECHAR PORTA":"E - ABRIR PORTA";
+std::string interactionPrompt(const Scene& cena, Interaction alvo) {
+    if (alvo==Interaction::Door) {
+        if (cena.portaBloqueada) return "E - INVERTER PORTA / AFASTE-SE";
+        return cena.portaAberta?"E - FECHAR PORTA":"E - ABRIR PORTA";
     }
-    if (target==Interaction::Window) {
-        if (scene.windowBlocked) return "E - INVERTER JANELA / AFASTE-SE";
-        return scene.windowOpen?"E - FECHAR JANELA":"E - ABRIR JANELA";
+    if (alvo==Interaction::Window) {
+        if (cena.janelaBloqueada) return "E - INVERTER JANELA / AFASTE-SE";
+        return cena.janelaAberta?"E - FECHAR JANELA":"E - ABRIR JANELA";
     }
-    if (target==Interaction::Lamp) return scene.lampOn?"E - DESLIGAR LUZ":"E - LIGAR LUZ";
+    if (alvo==Interaction::Lamp) return cena.luminariaLigada?"E - DESLIGAR LUZ":"E - LIGAR LUZ";
     return "";
 }
-std::string statusText(const Scene& scene) {
+std::string statusText(const Scene& cena) {
     const char* periods[]={"MANHA","TARDE","NOITE"};
-    return std::string("1/2/3 ")+periods[static_cast<int>(scene.period)]+" | LUZ "+
-           (scene.lampOn?"LIGADA":"DESLIGADA");
+    return std::string("1/2/3 ")+periods[static_cast<int>(cena.periodo)]+" | LUZ "+
+           (cena.luminariaLigada?"LIGADA":"DESLIGADA");
 }
