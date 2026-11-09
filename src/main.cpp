@@ -183,7 +183,7 @@ out vec4 vLampShadow;
 void main() {
     vec4 mundo = uModel * vec4(aPosition, 1.0);
     vPosition = mundo.xyz;
-    vNormal = transpose(inversa(mat3(uModel))) * aNormal;
+    vNormal = transpose(inverse(mat3(uModel))) * aNormal;
     vColor = aColor;
     vUV = aUV;
     vNaturalShadow = uNaturalShadowMatrix * mundo;
@@ -226,7 +226,7 @@ float shadowVisibility(sampler2D mapaProfundidade, vec4 lightSpace, vec3 normal,
     if (p.z <= 0.0 || p.z >= 1.0 || p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0)
         return 0.0;
     float deslocamentoSombra = max(0.002 * (1.0 - max(dot(normal,direcao),0.0)), 0.00065);
-    vec2 texel = 1.0 / vec2(tamanhoTextura(mapaProfundidade,0));
+    vec2 texel = 1.0 / vec2(textureSize(mapaProfundidade,0));
     float iluminacao = 0.0;
     for (int y=-1; y<=1; ++y)
         for (int x=-1; x<=1; ++x)
@@ -678,9 +678,9 @@ int run(bool isExecucaoEmModoTeste) {
     SetProcessDPIAware();
 
     // em caso de teste ajusta os tamanhos para um padrao
-    if (isExecucaoEmModoTeste) { 
-        larguraJanela=960; 
-        alturaJanela=640; 
+    if (isExecucaoEmModoTeste) {
+        larguraJanela=960;
+        alturaJanela=640;
     }
 
     // registra e cria a janela principal do Windows.
@@ -703,7 +703,7 @@ int run(bool isExecucaoEmModoTeste) {
 
 
     // Prepara janela para renderizacao e cria contexto Open GL 3.3
-    // ele seta: Versão do GL, cria ambiente usado para 
+    // ele seta: Versão do GL, cria ambiente usado para
     // gerenciar shaders, texturas, malhas, buffers e os demais estods e recursos graficos da GPU, que serão criados e associados posteriormente
     HDC contextoDispositivo = GetDC(janela);
     PIXELFORMATDESCRIPTOR descritorFormatoPixel{};
@@ -890,11 +890,11 @@ int run(bool isExecucaoEmModoTeste) {
     return 0;
 }
 
-} 
+}
 
 
 // inicializador da aplicacao
-int main(int argc, char** argv) { 
+int main(int argc, char** argv) {
     try {
         return run(argc > 1 && std::string(argv[1]) == "--verificar");
     } catch (const std::exception& error) {
