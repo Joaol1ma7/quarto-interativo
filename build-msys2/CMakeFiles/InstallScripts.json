@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/GitHub/quarto-interativo/build-msys2/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
