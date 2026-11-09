@@ -674,9 +674,16 @@ void verifyWindowEvents() {
     std::cout << "OK: eventos Win32 E/1/2/3, autorrepeticao, tamanho e perda de foco.\n";
 }
 
-int run(bool verificar) {
+int run(bool isExecucaoEmModoTeste) {
     SetProcessDPIAware();
-    if (verificar) { larguraJanela=960; alturaJanela=640; }
+
+    // em caso de teste ajusta os tamanhos para um padrao
+    if (isExecucaoEmModoTeste) { 
+        larguraJanela=960; 
+        alturaJanela=640; 
+    }
+
+    // registra e cria a janela principal do Windows.
     const HINSTANCE instancia = GetModuleHandleW(nullptr);
     WNDCLASSW classeJanela{};
     classeJanela.lpfnWndProc = windowProc;
@@ -693,6 +700,11 @@ int run(bool verificar) {
                              limites.right - limites.left, limites.bottom - limites.top,
                              nullptr, nullptr, instancia, nullptr);
     if (!janela) throw std::runtime_error("Falha ao criar a janela.");
+
+
+    // Prepara janela para renderizacao e cria contexto Open GL 3.3
+    // ele seta: Versão do GL, cria ambiente usado para 
+    // gerenciar shaders, texturas, malhas, buffers e os demais estods e recursos graficos da GPU, que serão criados e associados posteriormente
     HDC contextoDispositivo = GetDC(janela);
     PIXELFORMATDESCRIPTOR descritorFormatoPixel{};
     descritorFormatoPixel.nSize = sizeof(descritorFormatoPixel);
@@ -703,56 +715,73 @@ int run(bool verificar) {
     descritorFormatoPixel.cDepthBits = 24;
     descritorFormatoPixel.iLayerType = PFD_MAIN_PLANE;
     const int formatoPixel = ChoosePixelFormat(contextoDispositivo, &descritorFormatoPixel);
+
     if (!formatoPixel || !SetPixelFormat(contextoDispositivo, formatoPixel, &descritorFormatoPixel))
         throw std::runtime_error("Falha ao configurar o formato de pixels.");
 
     HGLRC contextoTemporario = wglCreateContext(contextoDispositivo);
     if (!contextoTemporario || !wglMakeCurrent(contextoDispositivo, contextoTemporario))
         throw std::runtime_error("Falha ao criar o contexto OpenGL temporario.");
+
     auto criarContexto = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(
         glFunction("wglCreateContextAttribsARB"));
+
     if (!criarContexto)
         throw std::runtime_error("OpenGL 3.3 nao disponivel neste computador.");
-    const int atributos[] = {WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                              WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-                              WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-                              0};
+
+    const int atributos[] = {WGL_CONTEXT_MAJOR_VERSION_ARB, 3, WGL_CONTEXT_MINOR_VERSION_ARB, 3, WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, 0};
     HGLRC contexto = criarContexto(contextoDispositivo, nullptr, atributos);
     if (!contexto) throw std::runtime_error("Falha ao criar contexto OpenGL 3.3.");
     wglMakeCurrent(nullptr, nullptr);
     wglDeleteContext(contextoTemporario);
+
     if (!wglMakeCurrent(contextoDispositivo, contexto))
         throw std::runtime_error("Falha ao ativar contexto OpenGL 3.3.");
+
     loadOpenGL();
+
     auto intervaloTroca = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>(
         glFunction("wglSwapIntervalEXT"));
+
     if (intervaloTroca) intervaloTroca(1);
 
+
+
+    // Cria o estado inicial da cena e os recursos usados pelo renderizador.
     Scene cena=makeScene();
     Renderer renderizador;
     glClearColor(0.43f, 0.67f, 0.87f, 1.0f);
+
+    // Prepara os quadros usados pelo modo de verificacao automatica.
     std::size_t quadroVerificacao=0;
     std::vector<VerificationFrame> quadrosVerificacao;
-    if (verificar) {
+    if (isExecucaoEmModoTeste) {
         verifyWindowEvents();
         quadrosVerificacao=makeVerificationFrames();
     }
 
+    // Posiciona e orienta a camera no ponto inicial da experiencia.
     Vec3 camera=cameraInicial;
     const Vec3 direcaoInicial=normalized(alvoInicial-camera);
     float guinada=std::atan2(direcaoInicial.z,direcaoInicial.x);
     float inclinacao=std::asin(direcaoInicial.y);
-    if (!verificar) {
+
+    // Exibe a janela e captura o cursor apenas durante o uso interativo.
+    if (!isExecucaoEmModoTeste) {
         ShowWindow(janela, SW_SHOW);
         UpdateWindow(janela);
         captureCursor(true);
         centerCursor();
     }
+
+    // Inicializa a medicao de tempo e apresenta os controles no terminal.
     auto anterior = std::chrono::steady_clock::now();
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << '\n';
     std::cout << "W/A/S/D: mover | mouse: olhar | E: interagir | 1/2/3: horario | Esc: sair\n";
 
+    // Mantem a aplicacao em execucao, processando entrada, simulacao e desenho.
     while (executando) {
+        // Processa todas as mensagens pendentes enviadas pelo Windows.
         MSG mensagem{};
         while (PeekMessageW(&mensagem, nullptr, 0, 0, PM_REMOVE)) {
             if (mensagem.message == WM_QUIT) executando = false;
@@ -760,11 +789,15 @@ int run(bool verificar) {
             DispatchMessageW(&mensagem);
         }
         if (!executando) break;
+
+        // Calcula o tempo transcorrido desde o quadro anterior.
         const auto agora = std::chrono::steady_clock::now();
         const float dt = std::min(std::chrono::duration<float>(agora - anterior).count(), 0.05f);
         anterior = agora;
 
-        if (!verificar && comFoco && cursorCapturado) {
+        // Le o mouse e o teclado quando a janela esta no modo interativo.
+        if (!isExecucaoEmModoTeste && comFoco && cursorCapturado) {
+            // Converte o deslocamento do mouse em rotacao da camera.
             if (redefinirMouse) {
                 centerCursor();
                 redefinirMouse = false;
@@ -782,6 +815,7 @@ int run(bool verificar) {
                 SetCursorPos(centro.x, centro.y);
             }
 
+            // Converte as teclas WASD em uma direcao de movimento.
             const Vec3 frente{std::cos(guinada), 0, std::sin(guinada)};
             const Vec3 direita{-frente.z, 0, frente.x};
             Vec3 direcao{0, 0, 0};
@@ -791,13 +825,18 @@ int run(bool verificar) {
             if (pressionada('D')) direcao = direcao + direita;
             if (pressionada('A')) direcao = direcao - direita;
             moveCamera(cena,camera,direcao,dt);
+
+            // Aplica interacoes pendentes e atualiza a simulacao da cena.
             Vec3 direcaoOlhar{std::cos(guinada)*std::cos(inclinacao),std::sin(inclinacao),std::sin(guinada)*std::cos(inclinacao)};
             for (char tecla : comandos) applyCommand(cena,tecla,camera,direcaoOlhar);
             updateScene(cena,dt,camera);
         }
+
+        // Descarta os comandos que ja foram tratados neste quadro.
         comandos.clear();
 
-        if (verificar) {
+        // Carrega o estado e a camera do quadro atual de verificacao.
+        if (isExecucaoEmModoTeste) {
             const auto& captura=quadrosVerificacao[quadroVerificacao];
             cena=captura.cena;
             camera=captura.camera;
@@ -805,6 +844,8 @@ int run(bool verificar) {
             guinada=std::atan2(direcao.z,direcao.x);
             inclinacao=std::asin(direcao.y);
         }
+
+        // Desenha a cena quando a janela possui uma area visivel valida.
         if (larguraJanela > 0 && alturaJanela > 0) {
             glViewport(0, 0, larguraJanela, alturaJanela);
             const Lighting luzes=lightingFor(cena);
@@ -818,7 +859,9 @@ int run(bool verificar) {
             const Mat4 visao = lookAt(camera, camera + direcaoOlhar);
             renderizador.draw(cena,camera,projecao,visao,larguraJanela,alturaJanela);
             renderizador.drawHud(larguraJanela,alturaJanela,cena,aimedInteraction(cena,camera,direcaoOlhar));
-            if (verificar) {
+
+            // Salva e registra o resultado do quadro no modo de verificacao.
+            if (isExecucaoEmModoTeste) {
                 saveFrame(quadrosVerificacao[quadroVerificacao].arquivo.c_str(),larguraJanela,alturaJanela);
                 if (glGetError()!=GL_NO_ERROR) throw std::runtime_error("Erro OpenGL durante verificacao.");
                 std::cout << "Captura: " << quadrosVerificacao[quadroVerificacao].arquivo
@@ -828,12 +871,16 @@ int run(bool verificar) {
                 ++quadroVerificacao;
                 if (quadroVerificacao==quadrosVerificacao.size()) executando=false;
             }
+
+            // Apresenta na janela o quadro que acabou de ser desenhado.
             SwapBuffers(contextoDispositivo);
         } else {
+            // Evita uso desnecessario do processador enquanto a janela esta minimizada.
             Sleep(16);
         }
     }
 
+    // Libera os recursos da aplicacao na ordem inversa da inicializacao.
     captureCursor(false);
     renderizador.release();
     wglMakeCurrent(nullptr, nullptr);
@@ -843,9 +890,11 @@ int run(bool verificar) {
     return 0;
 }
 
-} // namespace
+} 
 
-int main(int argc, char** argv) {
+
+// inicializador da aplicacao
+int main(int argc, char** argv) { 
     try {
         return run(argc > 1 && std::string(argv[1]) == "--verificar");
     } catch (const std::exception& error) {
