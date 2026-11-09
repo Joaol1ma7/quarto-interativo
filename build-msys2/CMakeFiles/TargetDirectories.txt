@@ -1,3 +1,0 @@
-C:/GitHub/quarto-interativo/build-msys2/CMakeFiles/quarto.dir
-C:/GitHub/quarto-interativo/build-msys2/CMakeFiles/edit_cache.dir
-C:/GitHub/quarto-interativo/build-msys2/CMakeFiles/rebuild_cache.dir
